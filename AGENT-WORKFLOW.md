@@ -7,9 +7,10 @@ building FDE Lab is also you learning the tools.
 
 ## Tooling
 
-- **Orchestrator:** LangGraph (open source) — a small graph that reads
-  `STORIES.md`, checks each story's dependencies, and hands the next eligible one
-  to a coding agent session.
+- **Orchestrator:** LangGraph (open source) — implemented in
+  `orchestrator/orchestrator.py`. Reads `STORIES.md`, checks each story's
+  dependencies, and hands the next eligible one to a headless coding agent
+  session. Runs unattended — see "Running it unattended" below.
 - **Coding agent:** a coding agent (e.g. Claude Code) invoked per story, given the
   story file plus the relevant `architecture.md` section as its only context.
 - **Version control & review:** plain git — a feature branch per story, a pull
@@ -30,6 +31,29 @@ building FDE Lab is also you learning the tools.
    criteria, each item checked off as satisfied.
 5. You review the PR like any other PR — that review is the real checkpoint.
 6. On merge, CI runs, and the story's status is updated.
+
+## Running it unattended
+
+`orchestrator/orchestrator.py` runs the loop above with no one watching:
+pick a story, branch, run Claude Code headless (`claude -p`), commit, push,
+open a PR, mark the story "In review," then loop to the next eligible story
+— stopping only once everything left is blocked on a dependency you haven't
+merged yet.
+
+It runs locally against your own Claude subscription (not the API), so it
+needs your machine on and `claude` already logged in interactively at least
+once. Kick off a run with `python orchestrator/orchestrator.py`, or in the
+background with `nohup python orchestrator/orchestrator.py > orchestrator_stdout.log 2>&1 &`
+so it can keep going while you're away.
+
+Failure handling: nothing merges to main regardless, so a bad run is never
+worse than a PR you don't approve — but a single failing story (a crashed
+agent call, a missing story file, an empty diff, a stale branch from a prior
+attempt) is still caught and logged to `orchestrator.log` rather than halting
+the whole run. The failing story is skipped for that run, any partial work is
+preserved on its branch as a `wip:` commit for you to inspect later, and the
+loop moves on to the next eligible story. A 20-story safety cap stops a
+runaway loop if something is wrong with the eligibility logic itself.
 
 ## Documentation produced inline
 
@@ -54,4 +78,7 @@ Branch -> PR -> review -> merge -> changelog is how most real teams already work
 agents in the loop or not. The only things added here are: stories as the unit of
 work an agent can pick up unambiguously, and a standing rule that any deviation
 from `architecture.md` gets folded back into `architecture.md` in the same PR
+rather than left to drift.
+
+from architecture.md gets folded back into architecture.md in the same PR
 rather than left to drift.
