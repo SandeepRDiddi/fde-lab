@@ -75,12 +75,20 @@ data, a system-level constraint, an AI persona for both the stakeholder interact
 and the demo/defend moment, time-boxed — polished enough to demo to stakeholders as
 the platform's proof of concept, not just a prototype of one piece.
 
+## Delivery context: LMS-integrated
+
+FDE Lab is meant to be reached from inside a course's Learning Management System
+(LMS) — a student goes through the lessons in the course, then launches straight
+into the matching scenario from there, rather than FDE Lab being a separate
+standalone destination. This shapes the platform as something that needs to serve
+multiple concurrent courses/cohorts over time, not just run a single demo cohort.
+
 ## Technical implementation
 
 See `architecture.md` for the full technical design — platform architecture, tech
-stack, deployment plan, and repo layout. `architecture.md` must stay aligned with
-this document: it exists to serve this intent, and any change to scope or experience
-here should be reflected there.
+stack, deployment plan, and repo layout — and `ROADMAP.md` for the phased plan for
+building it. Both must stay aligned with this document: they exist to serve this
+intent, and any change to scope or experience here should be reflected there.
 
 ## Open questions (to resolve next)
 
