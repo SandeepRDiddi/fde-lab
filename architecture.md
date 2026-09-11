@@ -93,6 +93,7 @@ fde-lab/
   lti-service/      # LTI 1.3 launch handling (Phase 3)
   mocks/           # legacy API sim, compliance engine, approval workflow
   data-gen/        # synthetic dataset generator
+  orchestrator/    # LangGraph story-picker (see AGENT-WORKFLOW.md)
   infra/
     docker-compose.yml  # Phase 1-2: local/single-host deployment
     k8s/                # Phase 4: manifests or Helm chart, per-cohort namespaces
