@@ -17,14 +17,21 @@ file's own `Status` field; keep this table in sync when a story moves.
 | FDE-007 | Approval workflow state machine | P1 | FDE-006 | Not started |
 | FDE-008 | Student scenario workspace (frontend) | P0 | FDE-001, FDE-004 | Not started |
 | FDE-009 | Instructor console (frontend) | P1 | FDE-001, FDE-002 | Not started |
-| FDE-010 | Railway deployment pipeline | P0 | FDE-001, FDE-002, FDE-003, FDE-004 | Not started |
+| FDE-010 | Docker Compose deployment | P0 | FDE-001, FDE-002, FDE-003, FDE-004 | Not started |
+| FDE-011 | LTI 1.3 launch service | P1 | FDE-001 | Not started |
+| FDE-012 | Kubernetes migration | P1 | FDE-010, FDE-011 | Not started |
 
 ## Pick-up order
 
 A story is only eligible once everything in its "Depends on" column is Done. The
 P0 stories (001, 002, 003, 004, 008, 010) together constitute the full end-to-end
 v1 demo committed to in `intent.md` — the P1 stories (005, 006, 007, 009) round out
-the remaining enterprise-friction and instructor-facing pieces.
+the remaining enterprise-friction and instructor-facing pieces. FDE-011 (LTI) and
+FDE-012 (Kubernetes) are Phase 3-4 work — see `ROADMAP.md` for the full phased plan
+and why they're sequenced after the core loop.
 
 See `AGENT-WORKFLOW.md` for how a story moves from this table into working, merged,
+documented code.
+
+See AGENT-WORKFLOW.md for how a story moves from this table into working, merged,
 documented code.
