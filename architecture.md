@@ -4,6 +4,7 @@ This document is the technical companion to `intent.md`. `intent.md` defines *wh
 FDE Lab is and *why* it's built the way it is; this document defines *how* it's built.
 If the two ever disagree, `intent.md` wins on intent and this document should be
 updated to match — this file exists to serve that vision, not the other way around.
+See `ROADMAP.md` for the phased plan for building this out.
 
 ## System overview
 
@@ -31,6 +32,15 @@ Students and instructors share one app, gated by role:
   feed, data explorer for the synthetic dataset, submission panel.
 - **Instructor view**: cohort configuration, scenario scheduling, live progress
   monitoring across the cohort.
+
+### LTI launch service — LMS entry point
+Added in Phase 3 (see `ROADMAP.md`). Handles the LTI 1.3 launch handshake (OIDC-based)
+from the course LMS (Canvas, Moodle, etc.): a student clicks a link inside their
+course and lands directly in their scenario instance, no separate login. Maps the
+LMS course/cohort onto a scenario instance in the scenario engine. Optional
+extensions once the core launch works: Names and Roles Provisioning Service (NRPS)
+to auto-populate a cohort from the LMS roster, and Assignment and Grade Services
+(AGS) to push a completion/score back to the LMS gradebook.
 
 ### Backend — FastAPI + Celery/Redis
 A Python/FastAPI service owns scenario state, submissions, and the websocket
@@ -80,25 +90,36 @@ fde-lab/
   frontend/        # Next.js app (student + instructor views)
   backend/         # FastAPI service + Celery workers
   persona-service/ # Claude persona logic, routed via PromptOps Gateway
+  lti-service/      # LTI 1.3 launch handling (Phase 3)
   mocks/           # legacy API sim, compliance engine, approval workflow
   data-gen/        # synthetic dataset generator
-  infra/           # Docker, deploy config
+  infra/
+    docker-compose.yml  # Phase 1-2: local/single-host deployment
+    k8s/                # Phase 4: manifests or Helm chart, per-cohort namespaces
   intent.md
   architecture.md
+  ROADMAP.md
 ```
 
 ## Deployment
 
-**v1 target: Railway**, using the same FastAPI + Celery + Redis combination already
-proven on `genai-pulse-bot` — no new deployment toolchain, fastest path to a working,
-demoable end-to-end system (matching the v1 scope in `intent.md`: no smaller starting
-slice, full client-ready demo).
+Every service is containerized regardless of orchestrator — that part isn't
+optional either way. What changes across phases is what runs those containers.
+Full detail and sequencing lives in `ROADMAP.md`; summary:
 
-**Future path**: if FDE Lab graduates from demo into something run inside an actual
-training program's infrastructure (UST, NIIT/StackRoute, or anything with stricter
-data-handling expectations), the natural migration is containerizing the services and
-moving to per-cohort isolated environments on a cloud provider. This is a
-post-validation migration, not a v1 blocker.
+**Phase 1-2: Docker Compose.** A `docker-compose.yml` wires together the FastAPI
+backend, Celery workers, persona service, frontend, Postgres, Redis, and a local
+S3-compatible store (e.g. MinIO). Single host, one cohort at a time. Fast to build
+and validate the full core loop and, later, multi-cohort isolation logic on a
+simple orchestrator before adding Kubernetes' complexity on top.
+
+**Phase 4: Kubernetes.** Once the LMS integration (Phase 3) is real, multiple
+courses/cohorts can launch concurrently, each needing an isolated environment —
+fresh synthetic data, its own mock services, its own time-box clock. Each cohort
+gets its own Kubernetes namespace, provisioned automatically on LTI launch or
+instructor action. Ingress routes per cohort; the time-boxed scenario lifecycle
+(unlock/close/pivot) maps onto Kubernetes Jobs/CronJobs. Docker Compose remains
+the local development target even after Kubernetes is the production target.
 
 ## Traceability to intent.md
 
@@ -110,12 +131,22 @@ post-validation migration, not a v1 blocker.
 | Enterprise constraints (legacy systems, compliance, approvals) | Mocks service (three sub-components) |
 | Scheduled, time-boxed cohort pacing | Celery + Redis scheduling in the backend |
 | Solo scenarios, team capstone | Data model supports both individual and team-scoped submissions |
-| End-to-end, client-ready v1 (no smaller slice) | Railway deployment of the full stack above, not a partial slice |
+| End-to-end, client-ready v1 (no smaller slice) | Docker Compose deployment of the full stack above, not a partial slice |
+| LMS-integrated delivery for cohorts | LTI 1.3 launch service (Phase 3) + Kubernetes per-cohort namespaces (Phase 4) |
 
 ## Open questions
 
-- Auth model for v1 (email/magic-link vs SSO)
+- Auth model for students who arrive outside an LMS launch (LTI login covers the
+  LMS-launched path; instructors and non-LMS access still need something — email/
+  magic-link vs SSO)
 - How persona personality/agenda gets authored per scenario (config format, tooling)
 - Exact parameterization schema for the data generator (what "messiness" knobs exist)
 - Whether the legacy API mock, compliance engine, and approval workflow are separate
   services or route-namespaced within the main backend for v1
+- Which LMS(s) to target first for Phase 3 (Canvas and Moodle both speak LTI 1.3,
+  but roster/grade APIs have platform-specific quirks worth confirming early)
+- Namespace provisioning trigger for Phase 4 — on LTI launch, on instructor action,
+  or both
+
+- Namespace provisioning trigger for Phase 4 — on LTI launch, on instructor action,
+-   or both
