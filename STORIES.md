@@ -11,7 +11,7 @@ file's own `Status` field; keep this table in sync when a story moves.
 | FDE-001 | Scenario engine skeleton | P0 | — | Done |
 | FDE-002 | Time-box scheduler | P0 | FDE-001 | In review |
 | FDE-003 | Synthetic data generator v1 | P0 | — | In review |
-| FDE-004 | AI persona service | P0 | FDE-001 | Not started |
+| FDE-004 | AI persona service | P0 | FDE-001 | In review |
 | FDE-005 | Legacy API mock service | P1 | — | Not started |
 | FDE-006 | Compliance checklist engine | P1 | — | Not started |
 | FDE-007 | Approval workflow state machine | P1 | FDE-006 | Not started |
