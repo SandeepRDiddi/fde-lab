@@ -5,15 +5,36 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this repo is right now
 
 FDE Lab is a training platform (simulated FDE client engagements for AI/Data
-professionals). As of now this repo is **planning + agent-orchestration
-scaffolding only** — none of the application services described in
-`architecture.md` (frontend, backend, persona-service, mocks, data-gen,
-lti-service) exist yet as code. The only real code is
-`orchestrator/orchestrator.py`, a LangGraph script that drives story
-implementation. There is no build, lint, or test tooling yet because there is
-no application code yet — don't invent commands for services that don't
-exist. Once a story's implementation lands, add its actual build/test/lint
-commands here.
+professionals). Application services are landing one story at a time (see
+`STORIES.md`); `frontend/`, `lti-service/`, and `mocks/` don't exist yet —
+don't invent commands for services that aren't built. `orchestrator/` is
+tooling (a LangGraph script that drives story implementation), not an
+application service.
+
+Each Python service (`backend/`, `data-gen/`, `persona-service/`) is
+independent — its own `requirements.txt`, no shared venv, no dependency on
+the others' packages (they only talk to each other over HTTP or a shared
+Postgres instance, per `architecture.md`). Standard pattern for each:
+
+```bash
+cd <service> && python3.11 -m venv .venv && .venv/bin/pip install -r requirements.txt
+FDE_DATABASE_URL="sqlite:///:memory:" .venv/bin/pytest -q   # backend only needs this env var
+.venv/bin/pytest -q                                          # data-gen, persona-service
+```
+
+`backend/` and `persona-service/` both use Alembic; check the migration
+chain has one head after adding a migration (especially relevant right after
+rebasing a long-lived branch onto `main`):
+
+```bash
+cd <service> && .venv/bin/python -c "
+from alembic.config import Config
+from alembic.script import ScriptDirectory
+script = ScriptDirectory.from_config(Config('alembic.ini'))
+print('heads:', script.get_heads())"
+```
+
+Add lint/typecheck commands here once a story introduces them — none exist yet.
 
 ## Document hierarchy — read in this order
 
@@ -53,6 +74,21 @@ match.
   automatically.
 - On merge: update the story's `Status` field and the matching row in
   `STORIES.md`, and append a one-line entry to `CHANGELOG.md`.
+
+### Stale branches are the norm, not the exception
+
+The orchestrator forks each story's branch from `main` at pick-up time, but
+runs stories sequentially while review/merge happens after the fact — so a
+later story's branch is routinely forked *before* an earlier one actually
+merges. Concretely: `feature/fde-003-*` and `feature/fde-004-*` were both cut
+before FDE-002 merged, so both were missing FDE-002's `ScenarioInstance`
+columns entirely and both reused Alembic revision id `0002` (a collision with
+FDE-002's already-merged migration of the same number). Before merging any
+PR that touches a file another already-merged story also touched: `git merge
+main` into the PR branch first, resolve conflicts (they're usually clean
+"both sides added something" conflicts, not real logic clashes), and
+renumber any colliding Alembic revision so the chain has one head (see the
+alembic heads check above) — don't just squash-merge a stale branch as-is.
 
 ### Story eligibility
 
