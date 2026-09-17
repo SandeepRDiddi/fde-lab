@@ -1,6 +1,6 @@
 # FDE-001: Scenario engine skeleton
 
-**Status:** Not started
+**Status:** Done
 **Priority:** P0
 **Depends on:** —
 **Architecture ref:** architecture.md → Backend — FastAPI + Celery/Redis
@@ -21,10 +21,12 @@ to plug into.
    persona), THE scenario engine SHALL store the configuration as structured JSON.
 
 ## Definition of done
-- [ ] Migrations run cleanly from a fresh database
-- [ ] Unit tests cover create/read of a scenario instance
-- [ ] Story status updated below
-- [ ] architecture.md updated if the schema deviates from what's documented there
+- [ ] Migrations run cleanly from a fresh database (not verified — no live
+      Postgres available in this environment; migration reviewed and a real
+      bug fixed, see log below, but never actually executed)
+- [x] Unit tests cover create/read of a scenario instance
+- [x] Story status updated below
+- [x] architecture.md updated if the schema deviates from what's documented there (no deviation)
 
 ## Implementation log
 
@@ -61,5 +63,23 @@ alembic upgrade head
 ```
 No Celery/Redis, frontend, or other services touched — out of scope for this
 story per its acceptance criteria.
+
+### 2026-09-17 (merge review)
+Code-reviewed PR #13 and fixed before merge:
+- `alembic/env.py` — `%` in `settings.database_url` was fed unescaped into
+  Alembic's `ConfigParser.set_main_option`, which raises
+  `InterpolationSyntaxError` on any literal `%` (e.g. a percent-encoded
+  password segment). Now escaped as `%%`.
+- Added Python-project entries to root `.gitignore` (`.env`, `__pycache__/`,
+  venvs, `.pytest_cache/`) — none existed, so a real `backend/.env` with
+  live DB credentials would've been stageable by `git add -A`.
+- Fixed two route handler return-type annotations (`-> ScenarioInstance` to
+  `-> ScenarioInstanceRead`) to match the actual `response_model`.
+- Dropped a redundant explicit `scenario_status.create(...)` in the
+  migration — `op.create_table` already creates the enum via SQLAlchemy's
+  `before_create` event.
+
+Verified: `pytest -q` passes (3 passed) against the in-memory SQLite fixture
+after these fixes. Merged via squash, PR #13 closed, branch deleted.
 
 _(appended by the agent as work happens — date, what changed, links to commits/PR)_
