@@ -11,7 +11,10 @@ class Submission:
 
     scenario_id: str
     content: str
-    metadata: Dict = field(default_factory=dict)
+    # Excluded from eq/hash: it's a mutable dict, and a frozen dataclass's
+    # auto-generated __hash__ would otherwise try to hash it and raise
+    # TypeError the moment anything hashes a Submission.
+    metadata: Dict = field(default_factory=dict, compare=False)
 
 
 @dataclass(frozen=True)
