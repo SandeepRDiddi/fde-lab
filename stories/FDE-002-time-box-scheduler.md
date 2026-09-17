@@ -1,6 +1,6 @@
 # FDE-002: Time-box scheduler
 
-**Status:** Not started
+**Status:** Done
 **Priority:** P0
 **Depends on:** FDE-001
 **Architecture ref:** architecture.md → Backend — FastAPI + Celery/Redis
@@ -22,9 +22,10 @@ intervention.
    enqueue a pivot job that injects the configured change at that time.
 
 ## Definition of done
-- [ ] Scheduled jobs verified against a test cohort with compressed timings
-- [ ] Story status updated below
-- [ ] architecture.md updated if the scheduling model deviates from what's documented
+- [x] Scheduled jobs verified against a test cohort with compressed timings (eager-mode
+      test suite; no live Redis/worker in this environment — see merge review below)
+- [x] Story status updated below
+- [x] architecture.md updated if the scheduling model deviates from what's documented (no deviation)
 
 ## Implementation log
 
@@ -74,5 +75,35 @@ pytest -q
 # with a local Postgres reachable at FDE_DATABASE_URL:
 alembic upgrade head
 ```
+
+### 2026-09-17 (merge review)
+Code-reviewed PR #14 and fixed before merge — two CONFIRMED bugs, plus
+smaller gaps:
+- Rescheduling never cancelled the previous schedule's unlock/close/pivot
+  Celery jobs, so a reschedule left the old jobs pending to fire at their
+  stale times alongside the new ones. Added `unlock_task_id`/`close_task_id`/
+  `pivot_task_id` columns (migration `0003`) and revoke the previous ids on
+  reschedule (best-effort — skipped under eager execution, where the prior
+  jobs already ran synchronously before the reschedule call).
+- `apply_scenario_pivot` checked only `pivot_config` truthiness, not
+  `pivot_applied_at`, so a redelivered/retried task could silently re-merge
+  a since-changed `pivot_config`. Now checks `pivot_applied_at is None` too.
+- `ScenarioInstanceSchedule` allowed naive datetimes, which crashed the
+  `end_at <= start_at` comparison with an unhandled 500 instead of a clean
+  422 if one field's timezone offset got dropped. Added a validator
+  rejecting naive input.
+- `conftest.py`'s `client` fixture flipped `task_always_eager` globally and
+  never reset it — fixed to restore the prior value on teardown.
+- Enqueue order changed to chronological (unlock, pivot, close) so
+  eager-mode tests exercise the same sequence real ETA scheduling would.
+- Instance wasn't refreshed after scheduling, so the response could
+  under-report state a task already committed via its own session under
+  eager execution — added a `db.refresh` before returning.
+
+Added tests: pivot idempotency (`test_pivot_task_is_idempotent`), naive
+datetime rejection, and reschedule revocation
+(`test_reschedule_revokes_previous_jobs`, faking `apply_async`/`revoke` so
+it runs without a live broker). `pytest -q` now passes: 17 passed. Merged
+via squash, PR #14 closed, branch deleted.
 
 _(appended by the agent as work happens)_
