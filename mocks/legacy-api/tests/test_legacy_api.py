@@ -1,8 +1,10 @@
 import json
 import time
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from pydantic import ValidationError
 
 from app.scenario_loader import ScenarioConfig, build_router, load_scenarios
 
@@ -74,6 +76,23 @@ def test_configured_latency_delays_response():
     elapsed = time.monotonic() - start
 
     assert elapsed >= 0.2
+
+
+def test_empty_responses_list_is_rejected():
+    with pytest.raises(ValidationError):
+        ScenarioConfig(scenario_id="acme-crm", path="/accounts", responses=[])
+
+
+def test_load_scenarios_skips_invalid_file_and_loads_the_rest(tmp_path):
+    (tmp_path / "broken.json").write_text(json.dumps({"scenario_id": "broken", "path": "/x", "responses": []}))
+    (tmp_path / "good.json").write_text(
+        json.dumps({"scenario_id": "demo", "path": "/widgets", "responses": [{"id": 1}]})
+    )
+
+    scenarios = load_scenarios(tmp_path)
+
+    assert len(scenarios) == 1
+    assert scenarios[0].scenario_id == "demo"
 
 
 def test_load_scenarios_from_directory(tmp_path):
