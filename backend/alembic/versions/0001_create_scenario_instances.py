@@ -17,7 +17,6 @@ depends_on = None
 
 def upgrade() -> None:
     scenario_status = sa.Enum("not_started", "active", "closed", name="scenario_status")
-    scenario_status.create(op.get_bind(), checkfirst=True)
 
     op.create_table(
         "scenario_instances",
