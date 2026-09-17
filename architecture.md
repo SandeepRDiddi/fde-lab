@@ -89,8 +89,16 @@ Three purpose-built services reproducing the "someone else's constraints" fricti
   (inconsistent schemas, latency, auth friction)
 - **Compliance checklist engine** — a rules-based gate a submission must satisfy
   before it can "ship"
-- **Approval workflow** — a state machine (submitted → pending → approved/rejected),
-  optionally with a built-in delay to simulate a real review cycle
+- **Approval workflow** — a state machine (submitted → pending_review →
+  approved/rejected), optionally with a built-in delay to simulate a real
+  review cycle. Implemented (FDE-007) directly in `backend/`, not as a
+  standalone `mocks/` service: a `Submission` table (FK to
+  `scenario_instances`) plus a `scenario.auto_decide` Celery task, reusing
+  the same ETA-scheduling pattern as the scenario pivot/unlock/close jobs
+  (`app/tasks.py`). This needed real DB persistence and delay-based
+  scheduling to satisfy its acceptance criteria, which the compliance engine
+  and legacy API mock didn't — so it resolves the "separate service vs.
+  backend route" open question for itself only, not for the other two.
 
 ### Synthetic data generation
 A standalone module (`data-gen/`) that runs at **cohort setup time**, not randomly or
@@ -186,8 +194,10 @@ the local development target even after Kubernetes is the production target.
   is now decided (`scenario_instances.config["persona"]`, see AI persona service
   above), but there's no authoring tooling yet; instructors currently need config
   written by hand/API call
-- Whether the legacy API mock, compliance engine, and approval workflow are separate
-  services or route-namespaced within the main backend for v1
+- Whether the legacy API mock and compliance engine are separate services or
+  route-namespaced within the main backend for v1 — the approval workflow
+  resolved this for itself in FDE-007 (backend route + DB table, not a
+  standalone service), but that doesn't settle it for the other two
 - Which LMS(s) to target first for Phase 3 (Canvas and Moodle both speak LTI 1.3,
   but roster/grade APIs have platform-specific quirks worth confirming early)
 - Namespace provisioning trigger for Phase 4 — on LTI launch, on instructor action,
