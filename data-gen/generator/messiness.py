@@ -34,9 +34,11 @@ def apply_messiness(
 ) -> list[dict]:
     rows = [dict(row) for row in rows]
     _inject_nulls(rows, fieldnames, id_field, profile.null_rate, rng)
-    rows = _inject_duplicates(rows, profile.duplicate_rate, rng)
     if profile.schema_drift:
         _inject_schema_drift(rows, fieldnames, id_field, rng)
+    # Duplicates are copied after nulls/drift so a "verbatim" duplicate
+    # actually matches the row it was copied from, including any drift.
+    rows = _inject_duplicates(rows, profile.duplicate_rate, rng)
     return rows
 
 

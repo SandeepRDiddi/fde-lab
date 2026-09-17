@@ -44,10 +44,19 @@ def generate_for_scenario_instance(
         key = f"datasets/{instance['cohort_id']}/{instance_id}/{uuid.uuid4().hex}.jsonl"
         location = store.upload(key, rows)
 
-        patch_response = client.patch(
-            f"/scenario-instances/{instance_id}/dataset",
-            json={"dataset_location": location},
-        )
-        patch_response.raise_for_status()
+        try:
+            patch_response = client.patch(
+                f"/scenario-instances/{instance_id}/dataset",
+                json={"dataset_location": location},
+            )
+            patch_response.raise_for_status()
+        except httpx.HTTPError as exc:
+            # The object is already uploaded at this point — surface its
+            # location so a failed PATCH is reconcilable instead of a
+            # silently orphaned S3 object with nothing pointing at it.
+            raise RuntimeError(
+                f"Uploaded dataset to {location} but failed to record it on "
+                f"scenario instance {instance_id}: {exc}"
+            ) from exc
 
     return location

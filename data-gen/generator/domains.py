@@ -44,7 +44,7 @@ def _build_hr_employee(fake: Faker, rng, index: int) -> dict:
         "department": rng.choice(["engineering", "sales", "finance", "support", "hr"]),
         "hire_date": fake.date_between(start_date="-8y", end_date="today").isoformat(),
         "salary": rng.randint(45_000, 220_000),
-        "manager_id": f"EMP-{rng.randint(0, index):06d}" if index else "",
+        "manager_id": f"EMP-{rng.randint(0, index - 1):06d}" if index else "",
     }
 
 

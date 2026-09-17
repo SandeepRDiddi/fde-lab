@@ -38,7 +38,8 @@ def test_generate_for_scenario_instance_records_location(monkeypatch, fake_s3_cl
     recorded_patches = []
     transport = httpx.MockTransport(_backend_app(instance, recorded_patches))
 
-    monkeypatch.setattr(httpx, "Client", lambda base_url: httpx.Client(base_url=base_url, transport=transport))
+    real_client = httpx.Client
+    monkeypatch.setattr(httpx, "Client", lambda base_url: real_client(base_url=base_url, transport=transport))
 
     store = S3DatasetStore(client=fake_s3_client, bucket="test-bucket")
 
@@ -71,7 +72,8 @@ def test_two_runs_for_the_same_instance_never_collide(monkeypatch, fake_s3_clien
     }
     recorded_patches = []
     transport = httpx.MockTransport(_backend_app(instance, recorded_patches))
-    monkeypatch.setattr(httpx, "Client", lambda base_url: httpx.Client(base_url=base_url, transport=transport))
+    real_client = httpx.Client
+    monkeypatch.setattr(httpx, "Client", lambda base_url: real_client(base_url=base_url, transport=transport))
 
     store = S3DatasetStore(client=fake_s3_client, bucket="test-bucket")
 
