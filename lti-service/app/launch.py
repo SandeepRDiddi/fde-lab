@@ -80,6 +80,15 @@ def validate_launch(*, state: str, id_token: str) -> LtiLaunch:
     except jwt.PyJWTError as exc:
         raise HTTPException(status_code=400, detail=f"id_token failed verification: {exc}") from exc
 
+    # IMS Security Framework: when aud is an array (multiple audiences), azp
+    # identifies which one is the actual authorized party -- pyjwt's audience
+    # check only confirms our client_id is *somewhere* in aud, which isn't
+    # enough to rule out audience confusion with a multi-value aud.
+    aud = claims.get("aud")
+    if isinstance(aud, list) and len(aud) > 1:
+        if claims.get("azp") != platform.client_id:
+            raise HTTPException(status_code=400, detail="azp does not match the expected client_id")
+
     if claims["nonce"] != expected_nonce:
         raise HTTPException(status_code=400, detail="nonce mismatch (possible replay)")
 

@@ -43,12 +43,17 @@ All via environment variables (see `app/config.py`):
 - `REDIS_URL` -- shared with the rest of the platform for OIDC state/nonce
   storage; falls back to an in-process dict if unset (fine for local dev
   and tests, not for multiple replicas).
+- `LTI_SESSION_COOKIE_SECURE` -- defaults to `true` (required for the
+  session cookie's `SameSite=None`, since the launch redirect is cross-site
+  from the LMS). Set to `false` for local dev over plain `http://localhost`
+  -- a real browser silently drops a `Secure` cookie over HTTP, which
+  otherwise makes the launch look broken with no error.
 
 ## Running locally
 
 ```
 pip install -r requirements-dev.txt
-uvicorn app.main:app --reload
+LTI_SESSION_COOKIE_SECURE=false uvicorn app.main:app --reload
 ```
 
 ## Tests

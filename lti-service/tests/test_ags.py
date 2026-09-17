@@ -1,7 +1,12 @@
 import pytest
+from fastapi.testclient import TestClient
 
 from app import ags
 from app.launch import LtiLaunch
+from app.launch_context_cache import remember
+from app.main import app
+
+client = TestClient(app)
 
 
 def _launch(with_ags=True, lineitem="https://canvas.test.instructure.com/api/lti/courses/101/line_items/9", test_platform=None):
@@ -60,3 +65,20 @@ def test_publish_score_without_lineitem_raises(test_platform):
     launch = _launch(lineitem=None, test_platform=test_platform)
     with pytest.raises(ValueError):
         ags.publish_score(launch, score_given=90, score_maximum=100)
+
+
+def test_score_push_endpoint_accepts_json_body(test_platform, monkeypatch):
+    """Regression test: this endpoint used to bind student_sub/score_given/
+    score_maximum as query params (no request model), which doesn't match
+    how a real caller posts a score."""
+    launch = _launch(test_platform=test_platform)
+    key = remember(launch)
+    monkeypatch.setattr(ags, "publish_score", lambda *a, **kw: None)
+
+    response = client.post(
+        f"/internal/lti-contexts/{key}/scores",
+        json={"student_sub": "student-42", "score_given": 90, "score_maximum": 100},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "submitted"}

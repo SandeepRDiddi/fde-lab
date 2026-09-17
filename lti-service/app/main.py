@@ -12,6 +12,7 @@ from typing import Optional
 
 from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse
+from pydantic import BaseModel
 
 from . import ags, nrps
 from .config import settings
@@ -32,7 +33,10 @@ def healthz():
 
 @app.get("/.well-known/jwks.json")
 def jwks():
-    return tool_jwks()
+    try:
+        return tool_jwks()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 async def _login_params(request: Request) -> dict:
@@ -64,7 +68,12 @@ async def lti_login(request: Request):
 
 
 @app.post("/lti/launch")
-async def lti_launch(state: str = Form(...), id_token: str = Form(...)):
+def lti_launch(state: str = Form(...), id_token: str = Form(...)):
+    # Plain `def`, not `async def`: this handler makes several blocking
+    # network calls (platform JWKS fetch, scenario-engine lookup) with no
+    # async client -- FastAPI runs sync route functions in a threadpool, so
+    # a slow platform/backend doesn't stall the event loop for every other
+    # in-flight request.
     launch = validate_launch(state=state, id_token=id_token)
     scenario = resolve_scenario_instance(launch)
     session_token = issue_session_token(launch, scenario)
@@ -78,8 +87,11 @@ async def lti_launch(state: str = Form(...), id_token: str = Form(...)):
         session_token,
         max_age=settings.session_ttl_seconds,
         httponly=True,
-        secure=True,
-        samesite="none",  # the browser follows this redirect cross-site, from the LMS's origin
+        secure=settings.session_cookie_secure,
+        # SameSite=None requires Secure (browsers reject the combination
+        # otherwise) -- only used when the cookie is actually secure, i.e.
+        # real deployments where this redirect is cross-site from the LMS.
+        samesite="none" if settings.session_cookie_secure else "lax",
     )
     return response
 
@@ -110,13 +122,19 @@ def get_roster(context_key: str):
     return {"members": nrps.fetch_roster(launch)}
 
 
+class ScorePush(BaseModel):
+    student_sub: str
+    score_given: float
+    score_maximum: float
+
+
 @app.post("/internal/lti-contexts/{context_key}/scores")
-def post_score(context_key: str, student_sub: str, score_given: float, score_maximum: float):
+def post_score(context_key: str, payload: ScorePush):
     ctx = recall(context_key)
     if ctx is None:
         raise HTTPException(status_code=404, detail="No cached launch for this context (or it expired)")
-    launch = _launch_from_context(ctx, subject=student_sub)
+    launch = _launch_from_context(ctx, subject=payload.student_sub)
     if launch.ags is None:
         raise HTTPException(status_code=422, detail="This LMS context doesn't support AGS")
-    ags.publish_score(launch, score_given=score_given, score_maximum=score_maximum)
+    ags.publish_score(launch, score_given=payload.score_given, score_maximum=payload.score_maximum)
     return {"status": "submitted"}

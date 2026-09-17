@@ -18,7 +18,12 @@ _jwks_cache: Dict[str, Any] = {}
 def tool_jwks() -> Dict[str, Any]:
     """This service's public JWKS, served at /.well-known/jwks.json so a
     platform can verify the client-assertion JWTs we send it for NRPS/AGS."""
-    public_key = serialization.load_pem_public_key(settings.tool_public_key_pem.encode())
+    if not settings.tool_public_key_pem:
+        raise RuntimeError("LTI_TOOL_PUBLIC_KEY_PEM is not configured")
+    try:
+        public_key = serialization.load_pem_public_key(settings.tool_public_key_pem.encode())
+    except ValueError as exc:
+        raise RuntimeError(f"LTI_TOOL_PUBLIC_KEY_PEM is not a valid PEM public key: {exc}") from exc
     jwk = json_web_key_from_public_key(public_key)
     jwk["kid"] = settings.tool_key_id
     jwk["use"] = "sig"

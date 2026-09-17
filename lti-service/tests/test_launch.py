@@ -105,6 +105,31 @@ def test_unknown_state_is_rejected(test_platform, platform_keys):
     assert exc_info.value.status_code == 400
 
 
+def test_multi_audience_without_matching_azp_is_rejected(test_platform, platform_keys):
+    state = _seed_login_state(test_platform)
+    id_token = _sign_id_token(
+        test_platform,
+        platform_keys,
+        overrides={"aud": [test_platform.client_id, "some-other-client"], "azp": "some-other-client"},
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        validate_launch(state=state, id_token=id_token)
+    assert exc_info.value.status_code == 400
+
+
+def test_multi_audience_with_matching_azp_is_accepted(test_platform, platform_keys):
+    state = _seed_login_state(test_platform)
+    id_token = _sign_id_token(
+        test_platform,
+        platform_keys,
+        overrides={"aud": [test_platform.client_id, "some-other-client"], "azp": test_platform.client_id},
+    )
+
+    launch = validate_launch(state=state, id_token=id_token)
+    assert launch.subject == "student-42"
+
+
 def test_nrps_and_ags_claims_pass_through(test_platform, platform_keys):
     state = _seed_login_state(test_platform)
     id_token = _sign_id_token(

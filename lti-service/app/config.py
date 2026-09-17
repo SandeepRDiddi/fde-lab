@@ -37,14 +37,17 @@ def _load_platforms() -> Dict[str, PlatformConfig]:
         raise RuntimeError(f"LTI_PLATFORMS_JSON is not valid JSON: {exc}") from exc
     platforms: Dict[str, PlatformConfig] = {}
     for entry in entries:
-        cfg = PlatformConfig(
-            issuer=entry["issuer"],
-            client_id=entry["client_id"],
-            deployment_ids=entry.get("deployment_ids", []),
-            auth_login_url=entry["auth_login_url"],
-            auth_token_url=entry["auth_token_url"],
-            key_set_url=entry["key_set_url"],
-        )
+        try:
+            cfg = PlatformConfig(
+                issuer=entry["issuer"],
+                client_id=entry["client_id"],
+                deployment_ids=entry.get("deployment_ids", []),
+                auth_login_url=entry["auth_login_url"],
+                auth_token_url=entry["auth_token_url"],
+                key_set_url=entry["key_set_url"],
+            )
+        except KeyError as exc:
+            raise RuntimeError(f"LTI_PLATFORMS_JSON entry is missing required field {exc}: {entry!r}") from exc
         platforms[cfg.key] = cfg
     return platforms
 
@@ -75,6 +78,14 @@ class Settings:
     session_ttl_seconds: int = int(os.environ.get("LTI_SESSION_TTL_SECONDS", "3600"))
     login_state_ttl_seconds: int = int(os.environ.get("LTI_LOGIN_STATE_TTL_SECONDS", "300"))
     session_cookie_name: str = os.environ.get("LTI_SESSION_COOKIE_NAME", "fde_session")
+    # A `Secure` cookie is silently dropped by browsers over plain HTTP --
+    # real deployments (behind HTTPS, cross-site from the LMS) need it, but
+    # local dev over http://localhost needs it off. Defaults on; the README's
+    # local-dev instructions set LTI_SESSION_COOKIE_SECURE=false.
+    session_cookie_secure: bool = os.environ.get("LTI_SESSION_COOKIE_SECURE", "true").lower() not in (
+        "false",
+        "0",
+    )
 
     redis_url: Optional[str] = os.environ.get("REDIS_URL")
 
