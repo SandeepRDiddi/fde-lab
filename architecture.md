@@ -62,6 +62,20 @@ directly — this gives centralized usage governance and observability across th
 whole training program for free, reusing infrastructure that already exists instead
 of building it twice.
 
+Implemented (FDE-004) as its own `persona-service/` FastAPI app, sharing the same
+Postgres instance as the backend rather than calling it over HTTP: the persona
+lives in the existing `scenario_instances.config` JSON column as
+`config["persona"] = {"system_prompt", "agenda"}`, and the persona service
+reads/writes that column directly (`app/scenario_ref.py`) while owning its own
+`conversations` / `messages` tables for per-student history. A mid-scenario pivot
+(FDE-002) is expected to `POST /scenario-instances/{id}/persona/pivot` to update
+`agenda` in place — the system prompt is rebuilt from the current config on every
+turn, so the updated agenda takes effect on the next message without starting a
+new conversation. The gateway's exact wire contract isn't documented anywhere in
+this repo yet, so `app/gateway.py` assumes it proxies the Anthropic Messages API
+shape (`model` / `system` / `messages` in, text out) — worth confirming against
+the real PromptOps Gateway API before Phase 1 integration testing.
+
 ### Enterprise system mocks
 Three purpose-built services reproducing the "someone else's constraints" friction:
 - **Legacy API simulator** — mock REST endpoints with intentionally quirky behavior
@@ -140,7 +154,10 @@ the local development target even after Kubernetes is the production target.
 - Auth model for students who arrive outside an LMS launch (LTI login covers the
   LMS-launched path; instructors and non-LMS access still need something — email/
   magic-link vs SSO)
-- How persona personality/agenda gets authored per scenario (config format, tooling)
+- How persona personality/agenda gets *authored* per scenario — the storage format
+  is now decided (`scenario_instances.config["persona"]`, see AI persona service
+  above), but there's no authoring tooling yet; instructors currently need config
+  written by hand/API call
 - Exact parameterization schema for the data generator (what "messiness" knobs exist)
 - Whether the legacy API mock, compliance engine, and approval workflow are separate
   services or route-namespaced within the main backend for v1
