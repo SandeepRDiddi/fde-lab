@@ -62,6 +62,27 @@ directly — this gives centralized usage governance and observability across th
 whole training program for free, reusing infrastructure that already exists instead
 of building it twice.
 
+Implemented (FDE-004) as its own `persona-service/` FastAPI app, sharing the same
+Postgres instance as the backend rather than calling it over HTTP: the persona
+lives in the existing `scenario_instances.config` JSON column as
+`config["persona"] = {"system_prompt", "agenda"}`, and the persona service
+reads/writes that column directly (`app/scenario_ref.py`) while owning its own
+`conversations` / `messages` tables for per-student history. The system prompt is
+rebuilt from the current config on every turn, so any change to
+`config["persona"]` takes effect on the next message without starting a new
+conversation — either path below picks this up automatically:
+- FDE-002's scripted pivot job merges `pivot_config` into `config` directly in
+  Postgres (now a one-level-deep merge, so a `persona` key in `pivot_config`
+  updates fields like `agenda` without clobbering `system_prompt`).
+- `POST /scenario-instances/{id}/persona/pivot` updates `agenda` the same way,
+  for a manual/instructor-triggered pivot outside the scripted-time path.
+Neither path calls the other — they're two independent ways to reach the same
+`config["persona"]` update, not a call chain. The gateway's exact wire contract
+isn't documented anywhere in
+this repo yet, so `app/gateway.py` assumes it proxies the Anthropic Messages API
+shape (`model` / `system` / `messages` in, text out) — worth confirming against
+the real PromptOps Gateway API before Phase 1 integration testing.
+
 ### Enterprise system mocks
 Three purpose-built services reproducing the "someone else's constraints" friction:
 - **Legacy API simulator** — mock REST endpoints with intentionally quirky behavior
@@ -72,10 +93,31 @@ Three purpose-built services reproducing the "someone else's constraints" fricti
   optionally with a built-in delay to simulate a real review cycle
 
 ### Synthetic data generation
-A standalone module that runs at **cohort setup time**, not randomly or on a fixed
-schedule. Given a scenario config (domain, target messiness, schema), it generates
-that cohort's dataset fresh — nulls, duplicates, schema drift, fake PII to mask — so
-no two training runs reuse the same data.
+A standalone module (`data-gen/`) that runs at **cohort setup time**, not randomly or
+on a fixed schedule. It reads its config from the scenario instance's own
+`config.data_gen` block (`domain`, `row_count`, `messiness`), generates that cohort's
+dataset fresh, uploads it to object storage under a `uuid4`-suffixed key (so a dataset
+is never overwritten or reused across runs, even a re-run of the same instance), and
+records the resulting location back onto the scenario instance via
+`PATCH /scenario-instances/{id}/dataset` on the backend (`dataset_location` column).
+
+Domains are code-defined schemas (v1 ships `ecommerce_orders` and `hr_employees`) —
+each a fixed column list, an id column, and a Faker-backed row builder that generates
+fake PII (names, emails) to mask. Messiness is exposed as three named levels rather
+than raw per-field knobs, since scenario authors think in terms of "how messy," not
+individual rates:
+
+| Level  | Null rate | Duplicate rate | Schema drift |
+|--------|-----------|-----------------|--------------|
+| low    | 2%        | 1%              | none |
+| medium | 8%        | 5%              | renamed/extra columns on a subset of rows |
+| high   | 20%       | 12%             | renamed/extra columns on a subset of rows |
+
+Output is newline-delimited JSON, not CSV — schema drift means rows can carry
+differing column sets, which a flat CSV can't represent. Freshness (never reusing a
+previous cohort's dataset) comes from two independent guarantees: the RNG seed is
+freshly drawn per run (never derived from the cohort/instance id), and the storage
+key always includes a new `uuid4`.
 
 ### Data layer
 - **Postgres** — cohorts, students, scenario definitions, submissions, scores
@@ -140,8 +182,10 @@ the local development target even after Kubernetes is the production target.
 - Auth model for students who arrive outside an LMS launch (LTI login covers the
   LMS-launched path; instructors and non-LMS access still need something — email/
   magic-link vs SSO)
-- How persona personality/agenda gets authored per scenario (config format, tooling)
-- Exact parameterization schema for the data generator (what "messiness" knobs exist)
+- How persona personality/agenda gets *authored* per scenario — the storage format
+  is now decided (`scenario_instances.config["persona"]`, see AI persona service
+  above), but there's no authoring tooling yet; instructors currently need config
+  written by hand/API call
 - Whether the legacy API mock, compliance engine, and approval workflow are separate
   services or route-namespaced within the main backend for v1
 - Which LMS(s) to target first for Phase 3 (Canvas and Moodle both speak LTI 1.3,

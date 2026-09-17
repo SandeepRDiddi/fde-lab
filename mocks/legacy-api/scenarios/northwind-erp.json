@@ -1,0 +1,10 @@
+{
+  "scenario_id": "northwind-erp",
+  "path": "/orders",
+  "auth_header": null,
+  "latency_ms": 1200,
+  "responses": [
+    {"order_id": 88190, "total": 452.10, "status": "shipped"},
+    {"orderId": "88190", "total": "452.10", "status": "SHIPPED"}
+  ]
+}

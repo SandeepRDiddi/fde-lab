@@ -1,0 +1,10 @@
+{
+  "scenario_id": "acme-crm",
+  "path": "/accounts",
+  "auth_header": "X-Legacy-Auth",
+  "latency_ms": 0,
+  "responses": [
+    {"account_id": 1042, "account_name": "Acme Corp", "active": true},
+    {"AccountID": "1042", "acct_name": "Acme Corp", "Active": "Y"}
+  ]
+}
