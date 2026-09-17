@@ -72,6 +72,23 @@ def test_pivot_task_merges_config(session_factory):
     db.close()
 
 
+def test_pivot_task_deep_merges_nested_dict_without_dropping_sibling_keys(session_factory):
+    instance_id = _make_instance(
+        session_factory,
+        config={"persona": {"system_prompt": "You are Dana.", "agenda": "Old agenda"}},
+        pivot_config={"persona": {"agenda": "New agenda"}},
+    )
+
+    tasks.apply_scenario_pivot(str(instance_id))
+
+    db = session_factory()
+    instance = db.get(ScenarioInstance, instance_id)
+    assert instance.config == {
+        "persona": {"system_prompt": "You are Dana.", "agenda": "New agenda"}
+    }
+    db.close()
+
+
 def test_pivot_task_noop_without_pivot_config(session_factory):
     instance_id = _make_instance(session_factory, config={"base": "value"})
 
