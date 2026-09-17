@@ -8,7 +8,7 @@ file's own `Status` field; keep this table in sync when a story moves.
 
 | ID | Title | Priority | Depends on | Status |
 |---|---|---|---|---|
-| FDE-001 | Scenario engine skeleton | P0 | — | Not started |
+| FDE-001 | Scenario engine skeleton | P0 | — | In review |
 | FDE-002 | Time-box scheduler | P0 | FDE-001 | Not started |
 | FDE-003 | Synthetic data generator v1 | P0 | — | Not started |
 | FDE-004 | AI persona service | P0 | FDE-001 | Not started |
