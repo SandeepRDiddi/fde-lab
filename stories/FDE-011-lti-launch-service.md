@@ -1,6 +1,6 @@
 # FDE-011: LTI 1.3 launch service
 
-**Status:** Not started
+**Status:** Done
 **Priority:** P1
 **Depends on:** FDE-001
 **Architecture ref:** architecture.md → LTI launch service — LMS entry point
@@ -23,9 +23,12 @@ LMS, so that I don't need a separate login or destination to get into FDE Lab.
 
 ## Definition of done
 - [ ] A test launch from at least one LMS (Canvas or Moodle) lands the student in
-      the correct scenario instance
-- [ ] Story status updated below
-- [ ] architecture.md updated if the LTI approach deviates from documented
+      the correct scenario instance (not verified — no live LMS available, and
+      the scenario engine (FDE-001, merged) has no `/internal/lti-mappings`
+      endpoint for this service to call yet; `test_full_launch_flow.py` simulates
+      both with a mocked response, see merge review below)
+- [x] Story status updated below
+- [x] architecture.md updated if the LTI approach deviates from documented (no deviation)
 
 ## Implementation log
 _(appended by the agent as work happens)_
@@ -79,4 +82,54 @@ the LTI 1.3 / OIDC launch handshake end to end:
   a scenario instance, NRPS/AGS as optional extensions) with no deviation in
   approach, only implementation-level choices (FastAPI, PyJWT, httpx, Redis for
   state) that architecture.md didn't already pin down for this service.
+
+### 2026-09-18 (merge review)
+Code-reviewed PR #19 and fixed before merge — auth-adjacent code, reviewed
+closely:
+- `OneTimeStateStore.pop()` did a non-atomic get-then-delete, so two
+  near-simultaneous launches with the same `state` could both redeem it,
+  defeating the one-time replay guard. Now atomic: Redis `GETDEL`, or a
+  `threading.Lock` around the in-memory fallback.
+- No `azp` claim check: per the IMS Security Framework, when `aud` has
+  multiple values, `azp` (not just membership in `aud`) identifies the
+  actual authorized party. A platform issuing multi-audience id_tokens could
+  have passed our audience check while actually being intended for a
+  different client. Added the check.
+- The session cookie was hardcoded `secure=True, samesite="none"`, which a
+  real browser silently drops over plain HTTP — breaking the README's own
+  documented local-dev workflow (`uvicorn app.main:app --reload` over
+  `http://localhost`) with no visible error. Added
+  `LTI_SESSION_COOKIE_SECURE` (default `true`; README's local-dev command
+  now sets it `false`), and `samesite` follows it (`SameSite=None` is
+  invalid without `Secure` anyway).
+- `POST /internal/lti-contexts/{key}/scores` bound `student_sub`/
+  `score_given`/`score_maximum` as query params with no request model —
+  didn't match how a real caller would POST a score (JSON body). Added a
+  `ScorePush` Pydantic model; this endpoint had no test coverage at all, so
+  added one.
+- `lti_launch` was `async def` but makes several blocking sync HTTP calls
+  (platform JWKS fetch, scenario-engine lookup) with no async client —
+  under load, one slow call stalls the event loop for every other in-flight
+  request. Changed to plain `def` so FastAPI runs it in its threadpool; a
+  full async-client rewrite across `keys.py`/`scenario_client.py`/`ags.py`/
+  `nrps.py`/`services_auth.py` would be a larger, separate change (also
+  addresses connection pooling, which this review left as-is).
+- `tool_jwks()` and `_load_platforms()` raised bare `ValueError`/`KeyError`
+  on a misconfigured PEM or platform entry — now raise a clear `RuntimeError`
+  naming the actual problem instead of an opaque 500/traceback.
+
+**Confirmed but left as-is** (noted for follow-up, not fixed here): the
+`ags.py`/`nrps.py` platform-resolution duplication and the duplicated
+kid-lookup loop in `keys.py` — real but low-severity simplification
+opportunities, not correctness issues.
+
+**Known integration gap, unchanged from the implementation log above**:
+`scenario_client.py` still calls a `GET /internal/lti-mappings` endpoint
+that doesn't exist on the now-merged FDE-001 backend. This needs either a
+follow-up story or folding into FDE-010 (Docker Compose wiring) before a
+real LTI launch can resolve an actual scenario instance.
+
+`pytest -q`: 22 passed (4 new: multi-audience azp accept/reject, malformed
+platform config, missing tool public key, AGS JSON-body endpoint). Merged
+via squash, PR #19 closed, branch deleted.
 

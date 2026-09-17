@@ -18,3 +18,8 @@ One line per merged story (see `AGENT-WORKFLOW.md`).
 - FDE-006: Compliance checklist engine — per-scenario rules block submission
   and name failures. Fixed keyword matching that a negating sentence
   ("no rollback plan") could trivially satisfy. (PR #18)
+- FDE-011: LTI 1.3 launch service — OIDC login/launch handshake, NRPS
+  roster pull, AGS score push. Fixed a replay race in the one-time state
+  store and a missing `azp` audience check. Scenario-engine mapping
+  endpoint it depends on still doesn't exist (needs FDE-010 or a follow-up
+  story). (PR #19)
