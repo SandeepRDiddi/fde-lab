@@ -27,4 +27,52 @@ intervention.
 - [ ] architecture.md updated if the scheduling model deviates from what's documented
 
 ## Implementation log
+
+### 2026-09-17
+Built the time-box scheduler on top of the FDE-001 `backend/` skeleton:
+- `app/models.py` — added `pivot_at`, `pivot_config` (JSON), `pivot_applied_at`,
+  `notified_at` columns to `ScenarioInstance`.
+- `app/celery_app.py` — new Celery app, Redis broker/backend from
+  `FDE_REDIS_URL` (new setting in `app/config.py`, defaults to local Redis).
+- `app/tasks.py` — three tasks: `unlock_scenario_instance` (AC2: status →
+  `active`, sets `notified_at`), `close_scenario_instance` (AC3: status →
+  `closed`), `apply_scenario_pivot` (AC4: merges `pivot_config` into `config`,
+  sets `pivot_applied_at`; no-ops if no `pivot_config` set).
+- `app/schemas.py` / `app/routers/scenario_instances.py` — new
+  `POST /scenario-instances/{id}/schedule` endpoint (AC1/AC4): instructor
+  submits `start_at`/`end_at`/optional `pivot_at`+`pivot_config`; validates
+  `end_at > start_at` and `start_at < pivot_at < end_at`, persists the
+  schedule, then enqueues the unlock/close/pivot jobs via `apply_async(eta=...)`.
+- `alembic/versions/0002_scenario_instance_scheduling.py` — migration for the
+  new columns.
+- `requirements.txt` — added `celery[redis]`.
+- `tests/test_tasks.py` — unit tests for each task's DB transition, run
+  against an in-memory SQLite DB via a monkeypatched `SessionLocal` (tasks use
+  their own DB session, not the FastAPI `get_db` dependency).
+- `tests/test_scheduler.py` — integration tests for the schedule endpoint
+  (enqueue + validation), and `tests/conftest.py` — `client` fixture now also
+  points `app.tasks.SessionLocal` at the test DB and flips Celery to
+  `task_always_eager` so scheduled jobs fire synchronously in-process against
+  compressed (second-scale) timings, with no live Redis/worker needed.
+
+AC3 ("lock further submissions") is implemented as far as this story's scope
+reaches: the instance transitions to `status = closed`. There is no
+submission endpoint yet (that's FDE-008, student workspace) — enforcement
+("reject writes when closed") belongs there and should check this field when
+built.
+
+No deviation from architecture.md — Celery/Redis stays in the FastAPI
+backend as documented, nothing split into a separate service.
+
+Same environment limitation as FDE-001: this sandboxed session could not run
+shell commands (`pip install`, `pytest`, `alembic upgrade`) — every `Bash`
+call required approval that wasn't granted. Implemented and tests written,
+but **not executed here**. Please run before merging:
+```
+cd backend && pip install -r requirements.txt
+pytest -q
+# with a local Postgres reachable at FDE_DATABASE_URL:
+alembic upgrade head
+```
+
 _(appended by the agent as work happens)_
