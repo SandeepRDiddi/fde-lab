@@ -1,6 +1,6 @@
 # FDE-006: Compliance checklist engine
 
-**Status:** Not started
+**Status:** Done
 **Priority:** P1
 **Depends on:** —
 **Architecture ref:** architecture.md → Enterprise system mocks
@@ -17,9 +17,9 @@ so that I practice working within approval constraints.
    block the submission and return the specific failing rule(s).
 
 ## Definition of done
-- [ ] At least one scenario has a working checklist end to end
-- [ ] Story status updated below
-- [ ] architecture.md updated if the checklist model deviates from documented
+- [x] At least one scenario has a working checklist end to end
+- [x] Story status updated below
+- [x] architecture.md updated if the checklist model deviates from documented (no deviation)
 
 ## Implementation log
 
@@ -56,5 +56,33 @@ permitted, including via a general-purpose subagent). The logic was traced
 by hand against all four test cases instead. Run the command above in an
 environment without that restriction to get an actual pass/fail before
 merge.
+
+### 2026-09-18 (merge review)
+Code-reviewed PR #18 and fixed before merge — the most serious finding
+defeated the checklist's whole purpose:
+- `_mentions()` did a naive substring match, so content that explicitly
+  *denies* the requirement still satisfied the rule as long as the keyword
+  appeared — e.g. "Rollback plan: none needed." passed
+  `rollback-plan-present` just because "rollback" is in the text. This was
+  even baked into the shipped test as expected behavior. Rewrote `_mentions`
+  to check a small token window on both sides of each keyword occurrence for
+  a negation word ("no", "not", "none", "without", etc.); a keyword is only
+  affirmed if at least one un-negated occurrence exists.
+- `pii-reviewed`/`approval-ticket-referenced` used `bool(metadata.get(...))`,
+  so a string value like `"false"` (Python-truthy) satisfied the rule despite
+  meaning the opposite. New `_truthy_metadata()` treats a small set of
+  falsy-looking strings ("false", "no", "n/a", "0", "") as not satisfying,
+  in addition to the empty/`None`/`0` cases `bool()` already caught.
+- `Submission` is `@dataclass(frozen=True)` but has a mutable `Dict` field —
+  the auto-generated `__hash__` tried to hash that dict and raised
+  `TypeError` the moment anything hashed a `Submission`. Excluded `metadata`
+  from eq/hash via `field(compare=False)`.
+
+Updated the existing "partial failure" test to use a non-negated rollback
+mention (so it still isolates exactly one failing rule as originally
+intended) and added three new tests: negated mention correctly fails,
+falsy-string metadata correctly fails, and `Submission` is actually
+hashable. `python3 -m unittest discover -s mocks/compliance-engine/tests -v`:
+7 passed. Merged via squash, PR #18 closed, branch deleted.
 
 _(appended by the agent as work happens)_

@@ -15,3 +15,6 @@ One line per merged story (see `AGENT-WORKFLOW.md`).
   FDE-002's shallow pivot merge (was dropping nested persona fields). (PR #16)
 - FDE-005: Legacy API mock service — scenario-configured schema drift,
   latency, unhelpful 401s; a scenario is a JSON file, no code change. (PR #17)
+- FDE-006: Compliance checklist engine — per-scenario rules block submission
+  and name failures. Fixed keyword matching that a negating sentence
+  ("no rollback plan") could trivially satisfy. (PR #18)
