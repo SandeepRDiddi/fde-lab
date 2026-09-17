@@ -10,6 +10,8 @@ to confirm once PromptOps Gateway's actual contract is available.
 """
 from __future__ import annotations
 
+from functools import lru_cache
+
 import httpx
 
 from app.config import settings
@@ -20,9 +22,12 @@ class PromptOpsGatewayClient:
         self.base_url = settings.promptops_gateway_url
         self.api_key = settings.promptops_gateway_api_key
         self.model = settings.promptops_gateway_model
+        # Reused across calls so requests on the hot chat-turn path share a
+        # pooled connection instead of paying a fresh TCP/TLS handshake each time.
+        self._client = httpx.Client(timeout=30.0)
 
     def complete(self, system_prompt: str, messages: list[dict[str, str]]) -> str:
-        response = httpx.post(
+        response = self._client.post(
             f"{self.base_url}/v1/messages",
             headers={"Authorization": f"Bearer {self.api_key}"},
             json={
@@ -30,12 +35,20 @@ class PromptOpsGatewayClient:
                 "system": system_prompt,
                 "messages": messages,
             },
-            timeout=30.0,
         )
         response.raise_for_status()
         data = response.json()
-        return data["content"]
+        content = data["content"]
+        # The Anthropic Messages API shape this assumes returns `content` as a
+        # list of content blocks (e.g. [{"type": "text", "text": "..."}]), not
+        # a plain string — normalize either shape to text.
+        if isinstance(content, list):
+            return "".join(
+                block.get("text", "") for block in content if isinstance(block, dict)
+            )
+        return content
 
 
+@lru_cache
 def get_gateway_client() -> PromptOpsGatewayClient:
     return PromptOpsGatewayClient()

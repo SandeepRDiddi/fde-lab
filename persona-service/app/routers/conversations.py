@@ -4,6 +4,7 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -25,17 +26,31 @@ def _require_persona_config(db: Session, scenario_instance_id: uuid.UUID) -> dic
     return persona
 
 
-def _get_or_create_conversation(db: Session, scenario_instance_id: uuid.UUID, student_id: uuid.UUID) -> Conversation:
-    conversation = db.execute(
+def _find_conversation(db: Session, scenario_instance_id: uuid.UUID, student_id: uuid.UUID) -> Conversation | None:
+    return db.execute(
         select(Conversation).where(
             Conversation.scenario_instance_id == scenario_instance_id,
             Conversation.student_id == student_id,
         )
     ).scalar_one_or_none()
-    if conversation is None:
-        conversation = Conversation(scenario_instance_id=scenario_instance_id, student_id=student_id)
-        db.add(conversation)
+
+
+def _get_or_create_conversation(db: Session, scenario_instance_id: uuid.UUID, student_id: uuid.UUID) -> Conversation:
+    conversation = _find_conversation(db, scenario_instance_id, student_id)
+    if conversation is not None:
+        return conversation
+    conversation = Conversation(scenario_instance_id=scenario_instance_id, student_id=student_id)
+    db.add(conversation)
+    try:
         db.flush()
+    except IntegrityError:
+        # Lost a race with a concurrent first message for the same
+        # (scenario_instance_id, student_id) — the other request's
+        # conversation now exists, so use that one instead of failing.
+        db.rollback()
+        conversation = _find_conversation(db, scenario_instance_id, student_id)
+        if conversation is None:
+            raise
     return conversation
 
 
@@ -84,12 +99,7 @@ def send_message(
 def get_conversation(
     scenario_instance_id: uuid.UUID, student_id: uuid.UUID, db: Session = Depends(get_db)
 ) -> ConversationRead:
-    conversation = db.execute(
-        select(Conversation).where(
-            Conversation.scenario_instance_id == scenario_instance_id,
-            Conversation.student_id == student_id,
-        )
-    ).scalar_one_or_none()
+    conversation = _find_conversation(db, scenario_instance_id, student_id)
 
     messages: list[Message] = []
     if conversation is not None:
@@ -107,7 +117,8 @@ def pivot_persona(scenario_instance_id: uuid.UUID, payload: PivotRequest, db: Se
     config = get_scenario_config(db, scenario_instance_id)
     if config is None:
         raise HTTPException(status_code=404, detail="Scenario instance not found")
-    config.setdefault("persona", {})
+    if not isinstance(config.get("persona"), dict):
+        config["persona"] = {}
     config["persona"]["agenda"] = payload.agenda
     set_scenario_config(db, scenario_instance_id, config)
     db.commit()

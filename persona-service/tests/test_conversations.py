@@ -97,6 +97,44 @@ def test_conversation_is_scoped_per_student(client, seed_scenario_instance):
     assert response.json()["messages"] == []
 
 
+def test_pivot_when_persona_key_is_null_does_not_crash(client, seed_scenario_instance):
+    scenario_id = uuid.uuid4()
+    seed_scenario_instance(scenario_id, {"persona": None})
+
+    response = client.post(
+        f"/scenario-instances/{scenario_id}/persona/pivot",
+        json={"agenda": "New agenda"},
+    )
+
+    assert response.status_code == 204
+
+
+def test_send_message_second_call_reuses_existing_conversation(client, seed_scenario_instance):
+    """Simulates the race in _get_or_create_conversation: a conversation that
+    already exists (e.g. created by a concurrent request) is reused instead
+    of raising on the unique constraint."""
+    from app.database import get_db
+    from app.main import app
+    from app.models import Conversation
+
+    scenario_id = uuid.uuid4()
+    student_id = uuid.uuid4()
+    seed_scenario_instance(scenario_id, _persona_config())
+
+    override = app.dependency_overrides[get_db]
+    db = next(override())
+    db.add(Conversation(scenario_instance_id=scenario_id, student_id=student_id))
+    db.commit()
+    db.close()
+
+    response = client.post(
+        f"/scenario-instances/{scenario_id}/messages",
+        json={"student_id": str(student_id), "message": "Hello"},
+    )
+
+    assert response.status_code == 201
+
+
 def test_pivot_updates_agenda_without_resetting_conversation(client, seed_scenario_instance, fake_gateway):
     scenario_id = uuid.uuid4()
     student_id = uuid.uuid4()
