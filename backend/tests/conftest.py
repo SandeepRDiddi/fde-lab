@@ -32,6 +32,8 @@ def client(monkeypatch):
     # so point them at the same in-memory test DB, and run them synchronously
     # ("eager") so tests can verify job effects without a live Redis broker/worker.
     monkeypatch.setattr(tasks, "SessionLocal", TestingSessionLocal)
+    prev_always_eager = celery_app.conf.task_always_eager
+    prev_eager_propagates = celery_app.conf.task_eager_propagates
     celery_app.conf.task_always_eager = True
     celery_app.conf.task_eager_propagates = True
     try:
@@ -39,3 +41,5 @@ def client(monkeypatch):
     finally:
         app.dependency_overrides.clear()
         Base.metadata.drop_all(bind=engine)
+        celery_app.conf.task_always_eager = prev_always_eager
+        celery_app.conf.task_eager_propagates = prev_eager_propagates

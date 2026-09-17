@@ -86,3 +86,28 @@ def test_pivot_task_noop_without_pivot_config(session_factory):
 
 def test_unlock_task_missing_instance_is_noop(session_factory):
     tasks.unlock_scenario_instance(str(uuid.uuid4()))
+
+
+def test_pivot_task_is_idempotent(session_factory):
+    instance_id = _make_instance(
+        session_factory, config={"base": "value"}, pivot_config={"twist": "budget cut"}
+    )
+
+    tasks.apply_scenario_pivot(str(instance_id))
+
+    db = session_factory()
+    instance = db.get(ScenarioInstance, instance_id)
+    first_applied_at = instance.pivot_applied_at
+    # A redelivered/duplicate task run can see a pivot_config that changed
+    # since the first run applied (e.g. a reschedule) — it must not re-merge.
+    instance.pivot_config = {"twist": "a different change"}
+    db.commit()
+    db.close()
+
+    tasks.apply_scenario_pivot(str(instance_id))
+
+    db = session_factory()
+    instance = db.get(ScenarioInstance, instance_id)
+    assert instance.config == {"base": "value", "twist": "budget cut"}
+    assert instance.pivot_applied_at == first_applied_at
+    db.close()

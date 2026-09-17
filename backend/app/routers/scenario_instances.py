@@ -3,6 +3,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.celery_app import celery_app
 from app.database import get_db
 from app.models import ScenarioInstance
 from app.schemas import ScenarioInstanceCreate, ScenarioInstanceRead, ScenarioInstanceSchedule
@@ -49,6 +50,20 @@ def schedule_scenario_instance(
     if payload.pivot_at is not None and not (payload.start_at < payload.pivot_at < payload.end_at):
         raise HTTPException(status_code=422, detail="pivot_at must fall between start_at and end_at")
 
+    # Revoke any jobs left over from a previous schedule on this instance —
+    # otherwise a reschedule leaves the old unlock/close/pivot jobs pending
+    # and they still fire at their original times alongside the new ones.
+    # Best-effort: an unreachable broker shouldn't block rescheduling, and
+    # under eager execution (tests) the old jobs already ran synchronously
+    # before this call, so there's nothing left to revoke.
+    if not celery_app.conf.task_always_eager:
+        for old_task_id in (instance.unlock_task_id, instance.close_task_id, instance.pivot_task_id):
+            if old_task_id:
+                try:
+                    celery_app.control.revoke(old_task_id)
+                except Exception:
+                    pass
+
     instance.start_at = payload.start_at
     instance.end_at = payload.end_at
     instance.pivot_at = payload.pivot_at
@@ -56,9 +71,21 @@ def schedule_scenario_instance(
     db.commit()
     db.refresh(instance)
 
-    unlock_scenario_instance.apply_async(args=[str(instance.id)], eta=payload.start_at)
-    close_scenario_instance.apply_async(args=[str(instance.id)], eta=payload.end_at)
+    # Enqueued in chronological order so eager-mode tests exercise the same
+    # sequence real ETA-scheduled execution would.
+    unlock_result = unlock_scenario_instance.apply_async(args=[str(instance.id)], eta=payload.start_at)
+    pivot_result = None
     if payload.pivot_at is not None:
-        apply_scenario_pivot.apply_async(args=[str(instance.id)], eta=payload.pivot_at)
+        pivot_result = apply_scenario_pivot.apply_async(args=[str(instance.id)], eta=payload.pivot_at)
+    close_result = close_scenario_instance.apply_async(args=[str(instance.id)], eta=payload.end_at)
+
+    instance.unlock_task_id = unlock_result.id
+    instance.pivot_task_id = pivot_result.id if pivot_result is not None else None
+    instance.close_task_id = close_result.id
+    db.commit()
+    # Tasks run in their own DB session; under eager execution they've
+    # already committed status/config changes by the time apply_async
+    # returns above, so re-sync this session's copy before returning it.
+    db.refresh(instance)
 
     return instance

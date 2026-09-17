@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 from app.models import ScenarioStatus
 
@@ -38,3 +38,13 @@ class ScenarioInstanceSchedule(BaseModel):
     end_at: datetime
     pivot_at: datetime | None = None
     pivot_config: dict | None = None
+
+    @field_validator("start_at", "end_at", "pivot_at")
+    @classmethod
+    def _require_timezone(cls, value: datetime | None) -> datetime | None:
+        # Comparing a naive and an aware datetime raises TypeError, not a
+        # clean validation error — reject naive input here so a dropped
+        # offset on one field fails with 422, not an unhandled 500.
+        if value is not None and value.tzinfo is None:
+            raise ValueError("must include a timezone offset")
+        return value

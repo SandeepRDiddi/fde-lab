@@ -43,7 +43,7 @@ def apply_scenario_pivot(instance_id: str) -> None:
     db = SessionLocal()
     try:
         instance = db.get(ScenarioInstance, uuid.UUID(instance_id))
-        if instance is None or not instance.pivot_config:
+        if instance is None or not instance.pivot_config or instance.pivot_applied_at is not None:
             return
         instance.config = {**instance.config, **instance.pivot_config}
         instance.pivot_applied_at = datetime.now(timezone.utc)

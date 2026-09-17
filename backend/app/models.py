@@ -43,6 +43,12 @@ class ScenarioInstance(Base):
     pivot_applied_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # Set when the unlock job notifies the student (FDE-002 AC2).
     notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Celery task ids for the currently-scheduled jobs, so a reschedule can
+    # revoke the previous schedule's still-pending jobs instead of leaving
+    # them to fire at their old times alongside the new ones.
+    unlock_task_id: Mapped[str | None] = mapped_column(nullable=True)
+    close_task_id: Mapped[str | None] = mapped_column(nullable=True)
+    pivot_task_id: Mapped[str | None] = mapped_column(nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

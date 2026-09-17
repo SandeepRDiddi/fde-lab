@@ -107,6 +107,69 @@ def test_schedule_rejects_pivot_outside_window(client):
     assert response.status_code == 422
 
 
+def test_schedule_rejects_naive_datetime(client):
+    instance = _create_instance(client)
+    now = datetime.now(timezone.utc)
+
+    response = client.post(
+        f"/scenario-instances/{instance['id']}/schedule",
+        json={
+            "start_at": now.replace(tzinfo=None).isoformat(),
+            "end_at": (now + timedelta(hours=1)).isoformat(),
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_reschedule_revokes_previous_jobs(client, monkeypatch):
+    from app import tasks as tasks_module
+    from app.celery_app import celery_app
+
+    revoked = []
+    monkeypatch.setattr(celery_app.control, "revoke", lambda task_id, **kw: revoked.append(task_id))
+
+    counter = {"n": 0}
+
+    class FakeResult:
+        def __init__(self, id):
+            self.id = id
+
+    def fake_apply_async(*, args, eta):
+        counter["n"] += 1
+        return FakeResult(f"task-{counter['n']}")
+
+    monkeypatch.setattr(tasks_module.unlock_scenario_instance, "apply_async", fake_apply_async)
+    monkeypatch.setattr(tasks_module.close_scenario_instance, "apply_async", fake_apply_async)
+    monkeypatch.setattr(tasks_module.apply_scenario_pivot, "apply_async", fake_apply_async)
+    # Exercise the real (non-eager) revoke path — apply_async is faked above
+    # so this doesn't need a live broker.
+    celery_app.conf.task_always_eager = False
+
+    instance = _create_instance(client)
+    now = datetime.now(timezone.utc)
+
+    first = client.post(
+        f"/scenario-instances/{instance['id']}/schedule",
+        json={
+            "start_at": (now + timedelta(hours=1)).isoformat(),
+            "end_at": (now + timedelta(hours=2)).isoformat(),
+        },
+    )
+    assert first.status_code == 200
+    assert revoked == []
+
+    second = client.post(
+        f"/scenario-instances/{instance['id']}/schedule",
+        json={
+            "start_at": (now + timedelta(hours=3)).isoformat(),
+            "end_at": (now + timedelta(hours=4)).isoformat(),
+        },
+    )
+    assert second.status_code == 200
+    assert set(revoked) == {"task-1", "task-2"}
+
+
 def test_schedule_not_found(client):
     now = datetime.now(timezone.utc)
 
