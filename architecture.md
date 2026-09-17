@@ -72,10 +72,31 @@ Three purpose-built services reproducing the "someone else's constraints" fricti
   optionally with a built-in delay to simulate a real review cycle
 
 ### Synthetic data generation
-A standalone module that runs at **cohort setup time**, not randomly or on a fixed
-schedule. Given a scenario config (domain, target messiness, schema), it generates
-that cohort's dataset fresh — nulls, duplicates, schema drift, fake PII to mask — so
-no two training runs reuse the same data.
+A standalone module (`data-gen/`) that runs at **cohort setup time**, not randomly or
+on a fixed schedule. It reads its config from the scenario instance's own
+`config.data_gen` block (`domain`, `row_count`, `messiness`), generates that cohort's
+dataset fresh, uploads it to object storage under a `uuid4`-suffixed key (so a dataset
+is never overwritten or reused across runs, even a re-run of the same instance), and
+records the resulting location back onto the scenario instance via
+`PATCH /scenario-instances/{id}/dataset` on the backend (`dataset_location` column).
+
+Domains are code-defined schemas (v1 ships `ecommerce_orders` and `hr_employees`) —
+each a fixed column list, an id column, and a Faker-backed row builder that generates
+fake PII (names, emails) to mask. Messiness is exposed as three named levels rather
+than raw per-field knobs, since scenario authors think in terms of "how messy," not
+individual rates:
+
+| Level  | Null rate | Duplicate rate | Schema drift |
+|--------|-----------|-----------------|--------------|
+| low    | 2%        | 1%              | none |
+| medium | 8%        | 5%              | renamed/extra columns on a subset of rows |
+| high   | 20%       | 12%             | renamed/extra columns on a subset of rows |
+
+Output is newline-delimited JSON, not CSV — schema drift means rows can carry
+differing column sets, which a flat CSV can't represent. Freshness (never reusing a
+previous cohort's dataset) comes from two independent guarantees: the RNG seed is
+freshly drawn per run (never derived from the cohort/instance id), and the storage
+key always includes a new `uuid4`.
 
 ### Data layer
 - **Postgres** — cohorts, students, scenario definitions, submissions, scores
@@ -141,7 +162,6 @@ the local development target even after Kubernetes is the production target.
   LMS-launched path; instructors and non-LMS access still need something — email/
   magic-link vs SSO)
 - How persona personality/agenda gets authored per scenario (config format, tooling)
-- Exact parameterization schema for the data generator (what "messiness" knobs exist)
 - Whether the legacy API mock, compliance engine, and approval workflow are separate
   services or route-namespaced within the main backend for v1
 - Which LMS(s) to target first for Phase 3 (Canvas and Moodle both speak LTI 1.3,

@@ -22,6 +22,11 @@ class ScenarioInstanceRead(BaseModel):
     student_id: uuid.UUID
     status: ScenarioStatus
     config: dict
+    dataset_location: str | None
     start_at: datetime | None
     end_at: datetime | None
     created_at: datetime
+
+
+class ScenarioInstanceDatasetUpdate(BaseModel):
+    dataset_location: str
