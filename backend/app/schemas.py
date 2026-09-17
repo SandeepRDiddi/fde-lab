@@ -24,4 +24,17 @@ class ScenarioInstanceRead(BaseModel):
     config: dict
     start_at: datetime | None
     end_at: datetime | None
+    pivot_at: datetime | None
+    pivot_config: dict | None
+    pivot_applied_at: datetime | None
+    notified_at: datetime | None
     created_at: datetime
+
+
+class ScenarioInstanceSchedule(BaseModel):
+    """Instructor-set schedule for a scenario instance (FDE-002 AC1, AC4)."""
+
+    start_at: datetime
+    end_at: datetime
+    pivot_at: datetime | None = None
+    pivot_config: dict | None = None
