@@ -13,3 +13,5 @@ One line per merged story (see `AGENT-WORKFLOW.md`).
 - FDE-004: AI persona service — persona chat via PromptOps Gateway,
   per-student conversation history, pivot updates agenda in place. Fixed
   FDE-002's shallow pivot merge (was dropping nested persona fields). (PR #16)
+- FDE-005: Legacy API mock service — scenario-configured schema drift,
+  latency, unhelpful 401s; a scenario is a JSON file, no code change. (PR #17)
