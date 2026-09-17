@@ -29,6 +29,58 @@ it was built on.
 ## Implementation log
 _(appended by the agent as work happens)_
 
+**2026-09-18** — Implemented Docker Compose deployment per architecture.md →
+Deployment (Phase 1-2).
+
+Added:
+- `backend/Dockerfile`, `persona-service/Dockerfile`, `data-gen/Dockerfile`
+  (python:3.11-slim, mirroring `lti-service/Dockerfile`'s existing pattern),
+  plus a `.dockerignore` for each.
+- `infra/docker-compose.yml`: postgres (16-alpine), redis (7-alpine), minio
+  (local S3-compatible store) + a `minio-init` one-shot container that
+  creates the dataset bucket via `mc`, `backend-migrate`/`persona-migrate`
+  one-shot containers that run `alembic upgrade head` before the long-running
+  `backend`, `celery-worker`, and `persona-service` containers start
+  (`depends_on: condition: service_completed_successfully`), and a `data-gen`
+  service under Compose profile `tools` (one-off, invoked per cohort setup
+  via `docker compose run --rm data-gen python -m generator <instance-id>`,
+  matching how FDE-003 already expected this piece to be wired). All
+  long-running services carry healthchecks so `docker compose up` reports
+  healthy only once the stack can actually serve traffic (AC3).
+- `infra/.env.example` documenting all overridable env vars, in particular
+  the `*_PORT` vars and `COMPOSE_PROJECT_NAME` needed to run two cohorts side
+  by side without collision (AC4) — Compose prefixes named volumes/network
+  with the project name automatically, so `-p cohort-a` / `-p cohort-b` (or
+  `COMPOSE_PROJECT_NAME`) with distinct `.env.cohort-*` port overrides gives
+  full state isolation between cohorts with no code changes.
+
+Deviation from AC1: no `frontend/` Dockerfile or Compose service. `frontend/`
+does not exist in this repo yet — FDE-008 (the story that creates it) is
+still "In review", not merged to `main`, and per CLAUDE.md's standing
+instruction not to invent commands/services for code that isn't built, a
+Dockerfile/service was not fabricated for it. `docker compose up` therefore
+brings up backend + Celery worker + persona-service + data (Postgres/Redis/
+MinIO) healthy, and "one full scenario end to end" (AC3) is exercised via the
+backend/persona-service APIs and the `data-gen` one-off container rather than
+through a UI. Once FDE-008 merges, add a `frontend` service to
+`infra/docker-compose.yml` following the same Dockerfile pattern (Next.js
+build) — no other part of this compose setup needs to change for that.
+
+architecture.md's Deployment/Repository-layout sections already described
+this shape accurately (backend, Celery workers, persona service, frontend,
+Postgres, Redis, MinIO, `infra/docker-compose.yml`) — no architecture.md
+changes were needed beyond the frontend sequencing gap noted above, which is
+a merge-order fact, not a design deviation.
+
+Not yet verified against a live Docker daemon: Bash tool access in this
+session was restricted to command approval that could not be granted
+interactively, so `docker compose config` / `docker compose up` could not be
+run here to confirm the stack actually comes up healthy end to end. The
+compose file was reviewed carefully by hand (dependency graph, healthchecks,
+env var interpolation, `depends_on` conditions) but running it on a real
+machine is still needed before checking off the Definition of done boxes
+above.
+
 
 ## Implementation log
 _(appended by the agent as work happens)_
