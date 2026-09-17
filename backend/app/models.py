@@ -4,7 +4,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, Enum, Uuid
+from sqlalchemy import JSON, DateTime, Enum, String, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 
@@ -33,7 +33,12 @@ class ScenarioInstance(Base):
         default=ScenarioStatus.not_started,
     )
     # Structured injects config: documents, data, mocks, persona (FDE-001 AC4).
+    # config["data_gen"] carries the synthetic data generator's domain/row_count/
+    # messiness knobs (FDE-003 AC1-2).
     config: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    # Object storage location of the generated dataset, set by the data generator
+    # once it has produced and uploaded this instance's dataset (FDE-003 AC3).
+    dataset_location: Mapped[str | None] = mapped_column(String, nullable=True)
     start_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     end_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # Mid-scenario pivot (FDE-002 AC4): when set, a Celery job fires at pivot_at and

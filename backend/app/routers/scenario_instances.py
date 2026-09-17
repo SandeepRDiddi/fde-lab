@@ -6,7 +6,12 @@ from sqlalchemy.orm import Session
 from app.celery_app import celery_app
 from app.database import get_db
 from app.models import ScenarioInstance
-from app.schemas import ScenarioInstanceCreate, ScenarioInstanceRead, ScenarioInstanceSchedule
+from app.schemas import (
+    ScenarioInstanceCreate,
+    ScenarioInstanceDatasetUpdate,
+    ScenarioInstanceRead,
+    ScenarioInstanceSchedule,
+)
 from app.tasks import apply_scenario_pivot, close_scenario_instance, unlock_scenario_instance
 
 router = APIRouter(prefix="/scenario-instances", tags=["scenario-instances"])
@@ -32,6 +37,21 @@ def get_scenario_instance(instance_id: uuid.UUID, db: Session = Depends(get_db))
     instance = db.get(ScenarioInstance, instance_id)
     if instance is None:
         raise HTTPException(status_code=404, detail="Scenario instance not found")
+    return instance
+
+
+@router.patch("/{instance_id}/dataset", response_model=ScenarioInstanceRead)
+def set_scenario_instance_dataset(
+    instance_id: uuid.UUID,
+    payload: ScenarioInstanceDatasetUpdate,
+    db: Session = Depends(get_db),
+) -> ScenarioInstanceRead:
+    instance = db.get(ScenarioInstance, instance_id)
+    if instance is None:
+        raise HTTPException(status_code=404, detail="Scenario instance not found")
+    instance.dataset_location = payload.dataset_location
+    db.commit()
+    db.refresh(instance)
     return instance
 
 
