@@ -43,6 +43,14 @@ One line per merged story (see `AGENT-WORKFLOW.md`).
   `--create-namespace` that would have broken provisioning any brand-new
   cohort. LTI-launch auto-provisioning still not wired (needs
   `/internal/lti-mappings` on the backend first). (PR #24)
+- 2026-09-18 — Wired the FDE-005 legacy-system mock into the student flow:
+  it had shipped as a standalone service with nothing calling it. Added a
+  backend proxy endpoint and a workspace panel to query it; verified live
+  (curl + Playwright) that the mock's unhelpful 401 and schema-drifting 200
+  responses reach the student unchanged. Also replaced the LLM behind
+  persona chat with a locally-run Ollama model (`llama3.2:3b`) instead of a
+  paid hosted API, and moved the compliance-checklist gate (FDE-006) so the
+  backend enforces it server-side instead of only the frontend.
 - 2026-09-18 — Live `docker compose up` validation pass (all PRs above were
   merged directly by the repo owner without review; ran a full pass after
   the fact): MinIO removed `minio/minio`/`minio/mc` from Docker Hub
