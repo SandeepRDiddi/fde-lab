@@ -25,7 +25,18 @@ export class UpstreamError extends Error {
 async function asJson<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    throw new UpstreamError(res.status, body || res.statusText);
+    // Upstream (backend/persona-service) errors come back as {"detail": "..."}.
+    // Extract just that message instead of passing the raw JSON text through
+    // -- otherwise it gets re-wrapped as {"detail": "{\"detail\": \"...\"}"}
+    // by the API route below and shown to the user double-encoded.
+    let message = body || res.statusText;
+    try {
+      const parsed = JSON.parse(body);
+      if (parsed && typeof parsed.detail === "string") message = parsed.detail;
+    } catch {
+      // not JSON -- use the raw text/statusText as-is
+    }
+    throw new UpstreamError(res.status, message);
   }
   return res.json() as Promise<T>;
 }
