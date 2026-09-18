@@ -1,12 +1,12 @@
-"""Client for PromptOps Gateway — the only path to Claude (architecture.md → AI
-persona service: "Persona calls route through PromptOps Gateway rather than
-hitting the Claude API directly").
+"""Client for the persona service's model backend (architecture.md → AI
+persona service calls this "PromptOps Gateway").
 
-The gateway's exact wire contract isn't documented elsewhere in this repo, so this
-client assumes it proxies the Anthropic Messages API shape (model / system /
-messages in, a text completion out) since that's the most natural fit for "Claude
-via PromptOps Gateway". Flagged in the FDE-004 implementation log as an assumption
-to confirm once PromptOps Gateway's actual contract is available.
+No PromptOps Gateway exists to point at yet, and a hosted Claude API costs
+real money per call for a training lab, so this defaults to a local Ollama
+instance (free, open-source models, runs on the training infrastructure
+itself) via Ollama's native /api/chat endpoint. Swap
+FDE_PROMPTOPS_GATEWAY_URL to a real gateway's URL later -- everything above
+this client (routers/conversations.py) is unaffected either way.
 """
 from __future__ import annotations
 
@@ -27,36 +27,36 @@ class PromptOpsGatewayClient:
         self.api_key = settings.promptops_gateway_api_key
         self.model = settings.promptops_gateway_model
         # Reused across calls so requests on the hot chat-turn path share a
-        # pooled connection instead of paying a fresh TCP/TLS handshake each time.
-        self._client = httpx.Client(timeout=30.0)
+        # pooled connection instead of paying a fresh TCP/TLS handshake each
+        # time. Generous timeout: local CPU inference (no dedicated GPU, or
+        # one shared with everything else on the machine) can take well over
+        # 30s for a single turn on anything past a small (~3B) model.
+        self._client = httpx.Client(timeout=90.0)
 
     def complete(self, system_prompt: str, messages: list[dict[str, str]]) -> str:
+        # Ollama's chat API takes the system prompt as just another message
+        # in the list (role "system"), rather than a separate top-level field.
+        ollama_messages = [{"role": "system", "content": system_prompt}, *messages]
+        headers = {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {}
         try:
             response = self._client.post(
-                f"{self.base_url}/v1/messages",
-                headers={"Authorization": f"Bearer {self.api_key}"},
+                f"{self.base_url}/api/chat",
+                headers=headers,
                 json={
                     "model": self.model,
-                    "system": system_prompt,
-                    "messages": messages,
+                    "messages": ollama_messages,
+                    "stream": False,
                 },
             )
             response.raise_for_status()
         except httpx.HTTPError as exc:
-            # Network failure, timeout, or a non-2xx from the gateway --
-            # surface as a clean error instead of an unhandled 500 (a real,
-            # everyday scenario since the gateway isn't part of this repo).
-            raise GatewayError(f"PromptOps Gateway request failed: {exc}") from exc
+            # Network failure, timeout, or a non-2xx from the model backend --
+            # surface as a clean error instead of an unhandled 500. A common
+            # everyday case: Ollama isn't running, or the model in
+            # FDE_PROMPTOPS_GATEWAY_MODEL hasn't been pulled yet.
+            raise GatewayError(f"Model backend request failed: {exc}") from exc
         data = response.json()
-        content = data["content"]
-        # The Anthropic Messages API shape this assumes returns `content` as a
-        # list of content blocks (e.g. [{"type": "text", "text": "..."}]), not
-        # a plain string — normalize either shape to text.
-        if isinstance(content, list):
-            return "".join(
-                block.get("text", "") for block in content if isinstance(block, dict)
-            )
-        return content
+        return data["message"]["content"]
 
 
 @lru_cache

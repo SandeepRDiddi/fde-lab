@@ -46,10 +46,15 @@ minio:
 # PromptOps Gateway is an external dependency, not part of this chart
 # (architecture.md open question) -- point this at wherever it actually
 # runs for the target cluster.
+# No real PromptOps Gateway exists yet. Locally (docker-compose.yml) this
+# points at Ollama on the host machine for a free, open-source-model dev
+# loop; on a real cluster there's no host machine to reach the same way, so
+# this still points at a placeholder in-cluster gateway hostname -- swap in
+# either a real gateway or a deployed Ollama Service once one exists here.
 promptopsGateway:
   url: "http://promptops-gateway.fde-lab-platform.svc.cluster.local:8100"
   apiKey: ""
-  model: "claude-sonnet-5"
+  model: "llama3.2:3b"
 
 # data-gen never runs as a standing Deployment (same as its "profiles:
 # tools" one-off treatment in docker-compose.yml) -- templates/data-gen-job.yaml

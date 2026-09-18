@@ -150,11 +150,14 @@ services:
     environment:
       FDE_DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-fde}:${POSTGRES_PASSWORD:-fde}@postgres:5432/${POSTGRES_DB:-fde_lab}
       # PromptOps Gateway isn't part of this repo (architecture.md open
-      # question) — point this at wherever it actually runs. Defaults to the
-      # host machine so a locally-running gateway is reachable from inside
-      # the container.
-      FDE_PROMPTOPS_GATEWAY_URL: ${PROMPTOPS_GATEWAY_URL:-http://host.docker.internal:8100}
+      # question) — defaults to a local Ollama instance on the host machine
+      # (free, no hosted-API cost for a training lab). Requires Ollama
+      # running on the host with the configured model already pulled
+      # (`ollama pull llama3.2:3b`). Override PROMPTOPS_GATEWAY_URL once a real
+      # gateway exists.
+      FDE_PROMPTOPS_GATEWAY_URL: ${PROMPTOPS_GATEWAY_URL:-http://host.docker.internal:11434}
       FDE_PROMPTOPS_GATEWAY_API_KEY: ${PROMPTOPS_GATEWAY_API_KEY:-}
+      FDE_PROMPTOPS_GATEWAY_MODEL: ${PROMPTOPS_GATEWAY_MODEL:-llama3.2:3b}
     ports:
       - "${PERSONA_PORT:-8001}:8000"
     depends_on:
