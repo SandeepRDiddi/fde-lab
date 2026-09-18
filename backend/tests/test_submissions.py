@@ -11,6 +11,45 @@ def _create_instance(client, config=None):
     return client.post("/scenario-instances", json=payload).json()
 
 
+def test_create_submission_rejects_content_failing_compliance_checklist(client):
+    instance = _create_instance(
+        client,
+        config={
+            "compliance_checklist": [
+                {"id": "len", "description": "at least 10 chars", "check": "min_length", "value": 10}
+            ]
+        },
+    )
+
+    response = client.post(f"/scenario-instances/{instance['id']}/submissions", json={"content": "short"})
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert detail["failures"] == [{"rule_id": "len", "description": "at least 10 chars"}]
+
+    # Rejected submission is never persisted.
+    listed = client.get(f"/scenario-instances/{instance['id']}/submissions").json()
+    assert listed == []
+
+
+def test_create_submission_accepts_content_passing_compliance_checklist(client):
+    instance = _create_instance(
+        client,
+        config={
+            "compliance_checklist": [
+                {"id": "len", "description": "at least 10 chars", "check": "min_length", "value": 10}
+            ]
+        },
+    )
+
+    response = client.post(
+        f"/scenario-instances/{instance['id']}/submissions", json={"content": "a sufficiently long report"}
+    )
+
+    assert response.status_code == 201
+    assert response.json()["status"] == "pending_review"
+
+
 def test_create_submission_moves_to_pending_review(client):
     instance = _create_instance(client)
 

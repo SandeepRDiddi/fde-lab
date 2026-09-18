@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.compliance import evaluate_submission
 from app.database import get_db
 from app.models import ApprovalStatus, ScenarioInstance, ScenarioStatus, Submission
 from app.schemas import SubmissionCreate, SubmissionDecision, SubmissionRead
@@ -64,14 +65,24 @@ def _parse_approval_config(config: dict) -> tuple[float | None, ApprovalStatus |
 def create_submission(
     instance_id: uuid.UUID, payload: SubmissionCreate, db: Session = Depends(get_db)
 ) -> SubmissionRead:
-    """AC1: called once a submission has passed the compliance checklist
-    (FDE-006) — a failing submission is blocked upstream by that engine and
-    never reaches this endpoint, so the only transition modeled here is
-    submitted -> pending_review. AC2: optionally schedules an auto-decision
-    per the scenario's configured review delay."""
+    """AC1: evaluates the submission against the scenario's compliance
+    checklist (config["compliance_checklist"]) itself -- this is the actual
+    enforcement point, not just a client-side check the frontend could skip
+    by calling this endpoint directly. A failing submission is rejected
+    (422) and never persisted; only a passing one moves to pending_review.
+    AC2: optionally schedules an auto-decision per the scenario's configured
+    review delay."""
     instance = _get_instance_or_404(instance_id, db)
     if instance.status == ScenarioStatus.closed:
         raise HTTPException(status_code=409, detail="Scenario instance is closed")
+
+    compliance_rules = instance.config.get("compliance_checklist") or []
+    passed, failures = evaluate_submission(payload.content, compliance_rules)
+    if not passed:
+        raise HTTPException(
+            status_code=422,
+            detail={"message": "Submission failed the compliance checklist", "failures": failures},
+        )
 
     review_delay_seconds, auto_decision = _parse_approval_config(instance.config)
 

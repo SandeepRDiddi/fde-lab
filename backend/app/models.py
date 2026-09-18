@@ -73,10 +73,11 @@ class ScenarioInstance(Base):
 
 
 class Submission(Base):
-    """A student's deliverable submission for a scenario instance. Assumed to
-    have already passed the compliance checklist (FDE-006 blocks a failing
-    submission before it reaches this table at all) and progresses through
-    the approval workflow state machine: submitted -> pending_review ->
+    """A student's deliverable submission for a scenario instance. Only ever
+    created after passing the compliance checklist -- app/compliance.py
+    evaluates it server-side in create_submission and rejects a failing one
+    (422) before a row is ever written here. Progresses through the
+    approval workflow state machine: submitted -> pending_review ->
     approved/rejected (FDE-007)."""
 
     __tablename__ = "submissions"

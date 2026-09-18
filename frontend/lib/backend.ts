@@ -6,6 +6,7 @@ import type {
   ScenarioSchedule,
   SubmissionDetail,
   SubmissionRecord,
+  SubmissionResult,
 } from "./types";
 
 // Server-side only — these route to the scenario engine (backend/) and the AI
@@ -64,19 +65,32 @@ export async function sendMessage(instanceId: string, studentId: string, message
 }
 
 /**
- * Records a submission that already passed the local compliance check
- * (lib/compliance.ts) against the backend's approval workflow (FDE-007).
- * Only `content` is accepted by the backend's SubmissionCreate schema — a
- * submission belongs to one scenario instance, which is already scoped to
- * one student, so there's no separate student_id to send.
+ * Records a submission against the backend's approval workflow (FDE-007).
+ * The backend itself evaluates the scenario's compliance checklist
+ * (app/compliance.py) -- it's the actual enforcement point, not just a
+ * client-side check this route could skip by calling the API directly. A
+ * 422 means the submission failed compliance and was never persisted; this
+ * normalizes that into the same {passed, failures} shape a client-side
+ * check would have produced, so the UI doesn't need to know which path it
+ * came from. Only `content` is accepted by the backend's SubmissionCreate
+ * schema — a submission belongs to one scenario instance, which is already
+ * scoped to one student, so there's no separate student_id to send.
  */
-export async function submitToBackend(instanceId: string, content: string): Promise<SubmissionRecord> {
+export async function submitToBackend(instanceId: string, content: string): Promise<SubmissionResult> {
   const res = await fetch(`${BACKEND_URL}/scenario-instances/${instanceId}/submissions`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ content }),
   });
-  return asJson<SubmissionRecord>(res);
+
+  if (res.status === 422) {
+    const body = await res.json().catch(() => ({}));
+    const failures = Array.isArray(body?.detail?.failures) ? body.detail.failures : [];
+    return { passed: false, failures };
+  }
+
+  const submission = await asJson<SubmissionRecord>(res);
+  return { passed: true, failures: [], submission };
 }
 
 /** Instructor console (FDE-009): every scenario instance for a cohort, one per student. */
