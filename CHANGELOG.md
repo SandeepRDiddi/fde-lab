@@ -32,3 +32,7 @@ One line per merged story (see `AGENT-WORKFLOW.md`).
   both of which would have broken a fresh `docker compose up`. Not verified
   against a live daemon (Docker Hub pulls were stuck in this environment).
   (PR #21)
+- FDE-007: Approval workflow state machine — submit → pending_review →
+  approved/rejected, manual or auto-decided after a configured delay. Fixed
+  a response-shape mismatch that would have crashed the FDE-008 frontend on
+  every submission, and a race between manual/auto decisions. (PR #22)

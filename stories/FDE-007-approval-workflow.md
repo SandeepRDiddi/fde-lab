@@ -1,6 +1,6 @@
 # FDE-007: Approval workflow state machine
 
-**Status:** Not started
+**Status:** Done
 **Priority:** P1
 **Depends on:** FDE-006
 **Architecture ref:** architecture.md → Enterprise system mocks
@@ -19,9 +19,9 @@ complete, so that I experience a real approval chain.
    the student and record the outcome on the scenario instance.
 
 ## Definition of done
-- [ ] Full submit → pending → approved/rejected cycle demoable
-- [ ] Story status updated below
-- [ ] architecture.md updated if the workflow model deviates from documented
+- [x] Full submit → pending → approved/rejected cycle demoable
+- [x] Story status updated below
+- [x] architecture.md updated if the workflow model deviates from documented
 
 ## Implementation log
 
@@ -94,5 +94,41 @@ DB session before the route's trailing `db.commit()`/`db.refresh()`, same
 pattern already proven in `schedule_scenario_instance`). Run the command
 above in an environment without that restriction, plus the alembic heads
 check, to get an actual pass/fail and confirm a single head before merge.
+
+### 2026-09-18 (merge review)
+Code-reviewed PR #22 and fixed before merge. The most severe finding was a
+cross-story regression, not a bug confined to this PR:
+- **The new `POST .../submissions` endpoint broke the already-merged
+  FDE-008 frontend.** That frontend calls this exact URL expecting either a
+  404 (its signal to fall back to a local compliance check) or a
+  `{passed, failures}` body — this endpoint now returns 201 with a
+  `SubmissionRead` body instead, which would have crashed
+  `SubmissionPanel.tsx` (`result.failures.map` on a response with no
+  `failures` key) on every single submission. Restructured the integration
+  instead of just aligning shapes: the frontend's local compliance check
+  (`lib/compliance.ts`) now runs first and gates whether the backend is
+  called at all — matching this endpoint's own docstring assumption that a
+  failing submission "never reaches this endpoint" — and the created
+  submission's `status`/`review_deadline_at` are surfaced in the UI once
+  recorded, so a student actually sees their submission enter the real
+  approval workflow rather than just a generic "checks passed" message.
+- **Race condition**: a manual decision and the `approval.auto_decide`
+  Celery task could both reach `apply_submission_decision` for the same
+  submission via independent check-then-write reads, so whichever committed
+  last silently won. Changed to a single atomic
+  `UPDATE ... WHERE status = pending_review`, so only the first writer's
+  decision applies; the loser gets a clear 409 instead of clobbering it.
+- `auto_decide_submission.apply_async(...)` in `create_submission` had no
+  error handling, unlike the revoke call sites elsewhere — a broker failure
+  would 500 a request whose submission row was already committed. Wrapped.
+- Extracted `revoke_task_if_pending` (now also passing `terminate=True`) as
+  a shared helper for the reschedule path and the manual-decision path,
+  removing duplicated best-effort revoke logic.
+- Removed a dead `status=submitted` assignment immediately overwritten by
+  `pending_review` two lines later.
+
+`pytest -q`: 35 passed (1 new: a direct test of the atomic decision race).
+`npm run typecheck` and `npm run build` both pass. Merged via squash, PR
+#22 closed, branch deleted.
 
 _(appended by the agent as work happens)_

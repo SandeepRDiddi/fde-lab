@@ -14,7 +14,7 @@ file's own `Status` field; keep this table in sync when a story moves.
 | FDE-004 | AI persona service | P0 | FDE-001 | Done |
 | FDE-005 | Legacy API mock service | P1 | — | Done |
 | FDE-006 | Compliance checklist engine | P1 | — | Done |
-| FDE-007 | Approval workflow state machine | P1 | FDE-006 | In review |
+| FDE-007 | Approval workflow state machine | P1 | FDE-006 | Done |
 | FDE-008 | Student scenario workspace (frontend) | P0 | FDE-001, FDE-004 | Done |
 | FDE-009 | Instructor console (frontend) | P1 | FDE-001, FDE-002 | Not started |
 | FDE-010 | Docker Compose deployment | P0 | FDE-001, FDE-002, FDE-003, FDE-004 | Done |
