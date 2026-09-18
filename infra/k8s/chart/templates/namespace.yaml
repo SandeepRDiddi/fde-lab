@@ -1,0 +1,12 @@
+{{- if .Values.createNamespace }}
+# Helm sorts Namespace ahead of every other kind on install/upgrade (built-in
+# kind ordering), so this always exists before any namespaced resource below
+# tries to land in it -- no hook needed for ordering here (AC2: isolated
+# namespace per cohort).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ include "cohort.namespace" . }}
+  labels:
+    {{- include "cohort.labels" . | nindent 4 }}
+{{- end }}

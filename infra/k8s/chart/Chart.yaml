@@ -1,0 +1,12 @@
+apiVersion: v2
+name: fde-lab-cohort
+description: >
+  Full FDE Lab stack for a single cohort (FDE-012, architecture.md ->
+  Deployment, Phase 4). One Helm release of this chart == one cohort's
+  isolated namespace: its own Postgres, Redis, object store, backend,
+  Celery worker, persona service, and frontend. Mirrors
+  infra/docker-compose.yml service-for-service; see that file's header
+  comment for the equivalent single-cohort local workflow.
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

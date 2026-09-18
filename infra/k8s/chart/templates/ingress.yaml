@@ -1,0 +1,33 @@
+# AC3: routes requests to the correct cohort's namespace. Only the
+# frontend is exposed publicly (see frontend.yaml's comment on why
+# backend/persona-service stay ClusterIP-only) -- host is
+# "<cohortId>.<ingress.domain>", so distinct cohorts never share a host,
+# and each Ingress only points at Services inside its own namespace (an
+# Ingress object cannot route to a Service in a different namespace), so
+# cross-cohort routing isn't possible even by misconfiguration.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: frontend
+  namespace: {{ include "cohort.namespace" . }}
+  labels:
+    {{- include "cohort.labels" . | nindent 4 }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- if .Values.ingress.tlsEnabled }}
+  tls:
+    - hosts:
+        - {{ printf "%s.%s" (include "cohort.slug" .) .Values.ingress.domain | quote }}
+      secretName: {{ .Values.ingress.tlsSecretName }}
+  {{- end }}
+  rules:
+    - host: {{ printf "%s.%s" (include "cohort.slug" .) .Values.ingress.domain | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 3000

@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: {{ include "cohort.namespace" . }}
+  labels:
+    {{- include "cohort.labels" . | nindent 4 }}
+    app: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+      fde-lab/cohort-id: {{ include "cohort.slug" . }}
+  template:
+    metadata:
+      labels:
+        app: redis
+        fde-lab/cohort-id: {{ include "cohort.slug" . }}
+    spec:
+      containers:
+        - name: redis
+          image: {{ .Values.redis.image }}
+          ports:
+            - containerPort: 6379
+          readinessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.resources.small | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: {{ include "cohort.namespace" . }}
+  labels:
+    {{- include "cohort.labels" . | nindent 4 }}
+spec:
+  selector:
+    app: redis
+    fde-lab/cohort-id: {{ include "cohort.slug" . }}
+  ports:
+    - port: 6379
+      targetPort: 6379

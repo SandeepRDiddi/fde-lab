@@ -1,0 +1,88 @@
+# Default values for one cohort's release of the fde-lab-cohort chart.
+# Override per install: `helm upgrade --install <release> . --set cohortId=<id>`
+# (infra/k8s/provision_cohort.py and infra/k8s/provisioner/ do exactly this).
+
+# Required. Used to derive the namespace name (cohort-<slugified id>), the
+# ingress host prefix, and resource labels. No default on purpose -- the
+# chart fails fast (see templates/_helpers.tpl) rather than silently
+# provisioning a namespace named "cohort-" for every cohort that forgets to
+# set this.
+cohortId: ""
+
+# Whether this release owns creating its own Namespace object. Left on by
+# default so `helm upgrade --install ... --namespace cohort-x` works without
+# also having to pass `--create-namespace` (the templated Namespace is a
+# normal chart-owned resource instead, which plays better with GitOps tools
+# that don't have a --create-namespace equivalent).
+createNamespace: true
+
+images:
+  backend: fde-lab-backend:local
+  persona: fde-lab-persona:local
+  frontend: fde-lab-frontend:local
+  dataGen: fde-lab-data-gen:local
+  pullPolicy: IfNotPresent
+
+postgres:
+  image: postgres:16-alpine
+  user: fde
+  password: fde
+  db: fde_lab
+  storageSize: 1Gi
+
+redis:
+  image: redis:7-alpine
+
+minio:
+  image: minio/minio:latest
+  mcImage: minio/mc:latest
+  rootUser: minioadmin
+  rootPassword: minioadmin
+  bucket: fde-lab-datasets
+  storageSize: 5Gi
+
+# PromptOps Gateway is an external dependency, not part of this chart
+# (architecture.md open question) -- point this at wherever it actually
+# runs for the target cluster.
+promptopsGateway:
+  url: "http://promptops-gateway.fde-lab-platform.svc.cluster.local:8100"
+  apiKey: ""
+  model: "claude-sonnet-5"
+
+# data-gen never runs as a standing Deployment (same as its "profiles:
+# tools" one-off treatment in docker-compose.yml) -- templates/data-gen-job.yaml
+# is rendered and applied per scenario-instance setup, not on every
+# `helm upgrade --install`. See infra/k8s/README.md for the invocation.
+dataGen:
+  scenarioInstanceId: ""
+
+ingress:
+  # Public host for this cohort is "<cohortId>.<domain>". Only the frontend
+  # is exposed -- it's the sole public entry point (CLAUDE.md: frontend
+  # talks to backend/persona-service only through its own server-side
+  # /api/* routes, no CORS needed on either service), so backend and
+  # persona-service stay ClusterIP-only.
+  domain: fde-lab.example.com
+  className: nginx
+  tlsEnabled: false
+  tlsSecretName: ""
+  # Namespace the ingress controller's own pods run in -- the NetworkPolicy
+  # (templates/networkpolicy.yaml) allows traffic from here to the frontend
+  # Service and denies everything else cross-namespace (AC4 isolation).
+  controllerNamespace: ingress-nginx
+
+resources:
+  small:
+    requests:
+      cpu: 50m
+      memory: 96Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+  medium:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi

@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: {{ include "cohort.namespace" . }}
+  labels:
+    {{- include "cohort.labels" . | nindent 4 }}
+    app: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+      fde-lab/cohort-id: {{ include "cohort.slug" . }}
+  template:
+    metadata:
+      labels:
+        app: backend
+        fde-lab/cohort-id: {{ include "cohort.slug" . }}
+    spec:
+      initContainers:
+        - name: wait-for-postgres
+          image: {{ .Values.postgres.image }}
+          command:
+            - /bin/sh
+            - -c
+            - until pg_isready -h postgres -U {{ .Values.postgres.user | quote }} -d {{ .Values.postgres.db | quote }}; do sleep 2; done
+      containers:
+        - name: backend
+          image: {{ .Values.images.backend }}
+          imagePullPolicy: {{ .Values.images.pullPolicy }}
+          ports:
+            - containerPort: 8000
+          env:
+            - name: FDE_DATABASE_URL
+              value: {{ include "cohort.databaseUrl" . | quote }}
+            - name: FDE_REDIS_URL
+              value: {{ include "cohort.redisUrl" . | quote }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.resources.medium | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: {{ include "cohort.namespace" . }}
+  labels:
+    {{- include "cohort.labels" . | nindent 4 }}
+spec:
+  selector:
+    app: backend
+    fde-lab/cohort-id: {{ include "cohort.slug" . }}
+  ports:
+    - port: 8000
+      targetPort: 8000

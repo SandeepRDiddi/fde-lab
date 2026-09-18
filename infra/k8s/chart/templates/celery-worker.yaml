@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: celery-worker
+  namespace: {{ include "cohort.namespace" . }}
+  labels:
+    {{- include "cohort.labels" . | nindent 4 }}
+    app: celery-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: celery-worker
+      fde-lab/cohort-id: {{ include "cohort.slug" . }}
+  template:
+    metadata:
+      labels:
+        app: celery-worker
+        fde-lab/cohort-id: {{ include "cohort.slug" . }}
+    spec:
+      initContainers:
+        - name: wait-for-postgres
+          image: {{ .Values.postgres.image }}
+          command:
+            - /bin/sh
+            - -c
+            - until pg_isready -h postgres -U {{ .Values.postgres.user | quote }} -d {{ .Values.postgres.db | quote }}; do sleep 2; done
+      containers:
+        - name: celery-worker
+          image: {{ .Values.images.backend }}
+          imagePullPolicy: {{ .Values.images.pullPolicy }}
+          command: ["celery", "-A", "app.celery_app", "worker", "--loglevel=info"]
+          env:
+            - name: FDE_DATABASE_URL
+              value: {{ include "cohort.databaseUrl" . | quote }}
+            - name: FDE_REDIS_URL
+              value: {{ include "cohort.redisUrl" . | quote }}
+          readinessProbe:
+            exec:
+              command: ["celery", "-A", "app.celery_app", "inspect", "ping"]
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.resources.medium | nindent 12 }}
