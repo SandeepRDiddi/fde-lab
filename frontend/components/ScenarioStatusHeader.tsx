@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Clock3 } from "lucide-react";
 import type { ScenarioInstance } from "../lib/types";
 
 function formatRemaining(ms: number): string {
@@ -31,13 +32,28 @@ export default function ScenarioStatusHeader({ instance }: { instance: ScenarioI
     return () => clearInterval(timer);
   }, [instance.status, instance.end_at]);
 
+  let remainingMs = 0;
+  let totalMs = 0;
+  if (instance.status === "active" && instance.end_at && now !== null) {
+    remainingMs = new Date(instance.end_at).getTime() - now;
+    if (instance.start_at) {
+      totalMs = new Date(instance.end_at).getTime() - new Date(instance.start_at).getTime();
+    }
+  }
+  const fractionLeft = totalMs > 0 ? remainingMs / totalMs : 1;
+  const urgency = fractionLeft < 0.1 ? "urgent" : fractionLeft < 0.25 ? "warn" : "calm";
+
   return (
-    <header className="status-header">
-      <div className={`status-badge status-${instance.status}`}>{STATUS_LABEL[instance.status]}</div>
+    <div className="status-bar">
+      <span className={`status-pill status-${instance.status}`}>{STATUS_LABEL[instance.status]}</span>
 
       {instance.status === "active" && instance.end_at && now !== null && (
         <div className="status-remaining">
-          Time remaining: <strong>{formatRemaining(new Date(instance.end_at).getTime() - now)}</strong>
+          <Clock3 size={15} />
+          Time remaining
+          <span className="status-clock" data-urgency={urgency}>
+            {formatRemaining(remainingMs)}
+          </span>
         </div>
       )}
 
@@ -48,6 +64,6 @@ export default function ScenarioStatusHeader({ instance }: { instance: ScenarioI
       {instance.status === "closed" && instance.end_at && (
         <div className="status-remaining">Closed at {new Date(instance.end_at).toLocaleString()}</div>
       )}
-    </header>
+    </div>
   );
 }

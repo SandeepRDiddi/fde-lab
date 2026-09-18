@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { AlertCircle, CheckCircle2, FileCheck2, XCircle } from "lucide-react";
 import type { SubmissionResult } from "../lib/types";
 
 export default function SubmissionPanel({
@@ -39,8 +40,11 @@ export default function SubmissionPanel({
   }
 
   return (
-    <section className="panel">
-      <h2>Submit your work</h2>
+    <section className="card">
+      <div className="card-header">
+        <FileCheck2 size={17} />
+        <h2>Submit your work</h2>
+      </div>
       {!canSubmit && <p className="empty-state">This scenario isn&apos;t active — submissions are closed.</p>}
 
       <textarea
@@ -50,17 +54,25 @@ export default function SubmissionPanel({
         disabled={!canSubmit || submitting}
         rows={6}
       />
-      <button onClick={handleSubmit} disabled={!canSubmit || submitting || !content.trim()}>
-        {submitting ? "Checking…" : "Submit for compliance review"}
-      </button>
+      <div style={{ marginTop: "0.75rem" }}>
+        <button onClick={handleSubmit} disabled={!canSubmit || submitting || !content.trim()}>
+          {submitting ? "Checking…" : "Submit for compliance review"}
+        </button>
+      </div>
 
-      {error && <p className="error-text">{error}</p>}
+      {error && (
+        <p className="error-text">
+          <AlertCircle size={14} /> {error}
+        </p>
+      )}
 
       {result && (
         <div className={`submission-result ${result.passed ? "passed" : "failed"}`}>
           {result.passed ? (
             <>
-              <p>All compliance checks passed.</p>
+              <div className="submission-result-head">
+                <CheckCircle2 size={16} /> All compliance checks passed.
+              </div>
               {result.submission && (
                 <p className="submission-status">
                   Status: {result.submission.status}
@@ -72,7 +84,9 @@ export default function SubmissionPanel({
             </>
           ) : (
             <>
-              <p>Compliance failures:</p>
+              <div className="submission-result-head">
+                <XCircle size={16} /> Compliance failures
+              </div>
               <ul>
                 {result.failures.map((failure) => (
                   <li key={failure.rule_id}>{failure.description}</li>

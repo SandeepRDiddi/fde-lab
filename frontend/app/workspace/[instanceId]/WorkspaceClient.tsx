@@ -1,5 +1,6 @@
 "use client";
 
+import AppShell from "../../../components/AppShell";
 import ArtifactFeed from "../../../components/ArtifactFeed";
 import DatasetLink from "../../../components/DatasetLink";
 import PersonaChat from "../../../components/PersonaChat";
@@ -17,20 +18,27 @@ export default function WorkspaceClient({
   const isActive = instance.status === "active";
 
   return (
-    <main className="workspace">
-      <ScenarioStatusHeader instance={instance} />
-
-      {isActive && (
-        <div className="workspace-grid">
-          <PersonaChat instanceId={instance.id} studentId={instance.student_id} initialMessages={initialMessages} />
-          <div className="workspace-sidebar">
-            <ArtifactFeed artifacts={instance.config.artifacts ?? []} />
-            <DatasetLink location={instance.dataset_location} />
-          </div>
+    <AppShell role="Student">
+      <main className="page">
+        <div className="page-header">
+          <span className="page-eyebrow">Scenario engagement</span>
+          <h1>Your workspace</h1>
         </div>
-      )}
 
-      <SubmissionPanel instanceId={instance.id} studentId={instance.student_id} canSubmit={isActive} />
-    </main>
+        <ScenarioStatusHeader instance={instance} />
+
+        {isActive && (
+          <div className="workspace-grid">
+            <PersonaChat instanceId={instance.id} studentId={instance.student_id} initialMessages={initialMessages} />
+            <div className="workspace-sidebar">
+              <ArtifactFeed artifacts={instance.config.artifacts ?? []} />
+              <DatasetLink location={instance.dataset_location} />
+            </div>
+          </div>
+        )}
+
+        <SubmissionPanel instanceId={instance.id} studentId={instance.student_id} canSubmit={isActive} />
+      </main>
+    </AppShell>
   );
 }

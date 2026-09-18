@@ -1,7 +1,9 @@
 "use client";
 
+import { ArrowRight, LayoutDashboard } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import AppShell from "../../components/AppShell";
 
 export default function InstructorLandingPage() {
   const router = useRouter();
@@ -14,22 +16,32 @@ export default function InstructorLandingPage() {
   }
 
   return (
-    <main className="workspace">
-      <h1>Instructor console</h1>
-      <section className="panel">
-        <h2>Open a cohort</h2>
-        <div className="chat-input">
-          <input
-            value={cohortId}
-            onChange={(e) => setCohortId(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && goToCohort()}
-            placeholder="Cohort ID"
-          />
-          <button onClick={goToCohort} disabled={!cohortId.trim()}>
-            Open
-          </button>
+    <AppShell role="Instructor">
+      <main className="page">
+        <div className="page-header">
+          <span className="page-eyebrow">Cohort management</span>
+          <h1>Instructor console</h1>
+          <p className="page-subtitle">Open a cohort to schedule its scenario and review student submissions.</p>
         </div>
-      </section>
-    </main>
+        <section className="card" style={{ maxWidth: 460 }}>
+          <div className="card-header">
+            <LayoutDashboard size={17} />
+            <h2>Open a cohort</h2>
+          </div>
+          <div className="chat-input">
+            <input
+              value={cohortId}
+              onChange={(e) => setCohortId(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && goToCohort()}
+              placeholder="Cohort ID"
+              style={{ width: "100%" }}
+            />
+            <button onClick={goToCohort} disabled={!cohortId.trim()}>
+              Open <ArrowRight size={14} />
+            </button>
+          </div>
+        </section>
+      </main>
+    </AppShell>
   );
 }

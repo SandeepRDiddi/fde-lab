@@ -1,4 +1,6 @@
+import { AlertCircle } from "lucide-react";
 import { notFound } from "next/navigation";
+import AppShell from "../../../components/AppShell";
 import { getConversation, getScenarioInstance, UpstreamError } from "../../../lib/backend";
 import type { Message } from "../../../lib/types";
 import WorkspaceClient from "./WorkspaceClient";
@@ -10,9 +12,13 @@ export default async function WorkspacePage({ params }: { params: { instanceId: 
   } catch (err) {
     if (err instanceof UpstreamError && err.status === 404) notFound();
     return (
-      <main className="workspace">
-        <p className="error-text">Couldn&apos;t load this scenario: {(err as Error).message}</p>
-      </main>
+      <AppShell role="Student">
+        <main className="page">
+          <p className="error-text">
+            <AlertCircle size={14} /> Couldn&apos;t load this scenario: {(err as Error).message}
+          </p>
+        </main>
+      </AppShell>
     );
   }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { AlertCircle, MessageSquare, Send } from "lucide-react";
 import type { Message } from "../lib/types";
 
 export default function PersonaChat({
@@ -55,19 +56,33 @@ export default function PersonaChat({
   }
 
   return (
-    <section className="panel">
-      <h2>Persona chat</h2>
+    <section className="card">
+      <div className="card-header">
+        <MessageSquare size={17} />
+        <h2>Persona chat</h2>
+      </div>
       <ul className="chat-log">
         {messages.map((message) => (
-          <li key={message.id} className={`chat-message chat-${message.role}`}>
-            <span className="chat-role">{message.role === "persona" ? "Client" : "You"}</span>
-            <p>{message.content}</p>
+          <li key={message.id} className={`chat-row from-${message.role}`}>
+            <span className={`chat-avatar ${message.role}`}>{message.role === "persona" ? "D" : "Y"}</span>
+            <div className="chat-bubble">
+              <span className="chat-role">{message.role === "persona" ? "Client" : "You"}</span>
+              <p>{message.content}</p>
+            </div>
           </li>
         ))}
-        {messages.length === 0 && <li className="empty-state">No messages yet — say hello.</li>}
+        {messages.length === 0 && (
+          <li className="empty-state">
+            <MessageSquare size={14} /> No messages yet — say hello.
+          </li>
+        )}
       </ul>
 
-      {error && <p className="error-text">{error}</p>}
+      {error && (
+        <p className="error-text">
+          <AlertCircle size={14} /> {error}
+        </p>
+      )}
 
       <div className="chat-input">
         <textarea
@@ -86,7 +101,7 @@ export default function PersonaChat({
           disabled={sending}
         />
         <button onClick={handleSend} disabled={sending || !draft.trim()}>
-          {sending ? "Sending…" : "Send"}
+          <Send size={14} /> {sending ? "Sending…" : "Send"}
         </button>
       </div>
     </section>
