@@ -6,14 +6,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 FDE Lab is a training platform (simulated FDE client engagements for AI/Data
 professionals). Application services are landing one story at a time (see
-`STORIES.md`); `lti-service/` doesn't exist yet — don't invent commands for
-services that aren't built. `orchestrator/` is tooling (a LangGraph script
-that drives story implementation), not an application service.
+`STORIES.md`) — as of now `backend/`, `data-gen/`, `persona-service/`,
+`lti-service/`, `mocks/legacy-api/`, `mocks/compliance-engine/`, and
+`frontend/` all exist; check `STORIES.md` before assuming a piece described
+in `architecture.md` is actually built. `orchestrator/` is tooling (a
+LangGraph script that drives story implementation), not an application
+service.
 
-Each Python service (`backend/`, `data-gen/`, `persona-service/`) is
-independent — its own `requirements.txt`, no shared venv, no dependency on
-the others' packages (they only talk to each other over HTTP or a shared
-Postgres instance, per `architecture.md`). Standard pattern for each:
+Each Python service (`backend/`, `data-gen/`, `persona-service/`,
+`lti-service/`, `mocks/legacy-api/`) is independent — its own
+`requirements.txt`, no shared venv, no dependency on the others' packages
+(they only talk to each other over HTTP or a shared Postgres instance, per
+`architecture.md`). `mocks/compliance-engine/` is stdlib-only (no
+`requirements.txt`, run its tests with `python3 -m unittest discover -s
+mocks/compliance-engine/tests`). Standard pattern for the rest:
 
 ```bash
 cd <service> && python3.11 -m venv .venv && .venv/bin/pip install -r requirements.txt
@@ -46,7 +52,8 @@ script = ScriptDirectory.from_config(Config('alembic.ini'))
 print('heads:', script.get_heads())"
 ```
 
-Add lint/typecheck commands here once a story introduces them — none exist yet.
+No lint/typecheck tooling exists for the Python services yet — add commands
+here once a story introduces them.
 
 ## Document hierarchy — read in this order
 
@@ -143,26 +150,25 @@ See `architecture.md` for full detail; the load-bearing shape:
   (scenario unlock/close, scripted mid-scenario pivots).
 - **Persona service**: Claude, routed through PromptOps Gateway (not called
   directly) for centralized usage governance/observability.
-- **Enterprise mocks**: three sub-components — legacy API simulator,
-  compliance checklist engine, approval workflow state machine — reproducing
-  "someone else's constraints" friction. Not yet decided whether these ship
-  as separate services or route-namespaced within the backend for v1 (see
-  `architecture.md`'s open questions).
+- **Enterprise mocks**: built as separate standalone services/modules, not
+  backend routes — `mocks/legacy-api/` (schema drift, latency, unhelpful
+  401s, one FastAPI route per scenario JSON file) and
+  `mocks/compliance-engine/` (stdlib-only rule engine, no HTTP surface yet —
+  see its own README). The approval workflow state machine (FDE-007) is not
+  merged as of this writing — check `STORIES.md`.
 - **Data-gen**: synthetic dataset generator that runs once per cohort setup
   (not randomized, not shared/reused across cohorts) — nulls, duplicates,
-  schema drift, fake PII.
-- **LTI launch service**: Phase 3 — LTI 1.3 / OIDC handshake mapping an LMS
-  course/cohort onto a scenario instance.
+  schema drift, fake PII. Not yet wired to fire automatically on scenario
+  instance creation (FDE-003's AC1) — currently a library function + CLI,
+  invoked manually; needs a follow-up story or FDE-010/12 wiring.
+- **LTI launch service**: `lti-service/` — LTI 1.3 / OIDC handshake mapping
+  an LMS course/cohort onto a scenario instance, NRPS roster pull, AGS score
+  push. Its scenario-engine lookup (`GET /internal/lti-mappings`) has no
+  matching endpoint on the backend yet — another follow-up-story gap.
 - **Deployment**: Docker Compose through Phase 1-3 (every service
   containerized regardless); Kubernetes in Phase 4 adds per-cohort namespaces
   once concurrent multi-cohort/multi-course load is real. Compose remains the
   local dev target even after Kubernetes is production.
 
-Planned repo layout (most of these directories don't exist yet — see
-`architecture.md` → "Repository layout" for the authoritative version):
-
-```
-frontend/ backend/ persona-service/ lti-service/ mocks/ data-gen/
-orchestrator/   # exists today — LangGraph story-picker
-infra/docker-compose.yml   infra/k8s/
-```
+See `architecture.md` → "Repository layout" for the full/authoritative
+layout as more stories land.
