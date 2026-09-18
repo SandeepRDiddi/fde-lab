@@ -1,0 +1,115 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: minio-data
+  namespace: {{ include "cohort.namespace" . }}
+  labels:
+    {{- include "cohort.labels" . | nindent 4 }}
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: {{ .Values.minio.storageSize }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minio
+  namespace: {{ include "cohort.namespace" . }}
+  labels:
+    {{- include "cohort.labels" . | nindent 4 }}
+    app: minio
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: minio
+      fde-lab/cohort-id: {{ include "cohort.slug" . }}
+  template:
+    metadata:
+      labels:
+        app: minio
+        fde-lab/cohort-id: {{ include "cohort.slug" . }}
+    spec:
+      containers:
+        - name: minio
+          image: {{ .Values.minio.image }}
+          args: ["server", "/data", "--console-address", ":9001"]
+          ports:
+            - containerPort: 9000
+            - containerPort: 9001
+          envFrom:
+            - secretRef:
+                name: cohort-secrets
+          volumeMounts:
+            - name: minio-data
+              mountPath: /data
+          # No Docker-level-style healthcheck here either, same reason
+          # docker-compose.yml's minio service dropped one: recent
+          # minio/minio images don't ship curl. minio-init's own retry
+          # loop (below) is what actually gates on minio being reachable.
+          resources:
+            {{- toYaml .Values.resources.medium | nindent 12 }}
+      volumes:
+        - name: minio-data
+          persistentVolumeClaim:
+            claimName: minio-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio
+  namespace: {{ include "cohort.namespace" . }}
+  labels:
+    {{- include "cohort.labels" . | nindent 4 }}
+spec:
+  selector:
+    app: minio
+    fde-lab/cohort-id: {{ include "cohort.slug" . }}
+  ports:
+    - name: api
+      port: 9000
+      targetPort: 9000
+    - name: console
+      port: 9001
+      targetPort: 9001
+---
+# Same one-shot bucket-creation role as docker-compose.yml's minio-init
+# service: retries `mc alias set` in a loop until minio answers, then
+# creates the dataset bucket if it doesn't already exist. Runs as a
+# post-install/post-upgrade hook so it fires after the minio
+# Deployment/Service above exist, and gets replaced (not duplicated) on
+# every `helm upgrade`.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: minio-init
+  namespace: {{ include "cohort.namespace" . }}
+  labels:
+    {{- include "cohort.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 6
+  template:
+    metadata:
+      labels:
+        {{- include "cohort.labels" . | nindent 8 }}
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: minio-init
+          image: {{ .Values.minio.mcImage }}
+          envFrom:
+            - secretRef:
+                name: cohort-secrets
+          command:
+            - /bin/sh
+            - -c
+            - >
+              until mc alias set local http://minio:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" >/dev/null 2>&1; do sleep 2; done &&
+              mc mb --ignore-existing local/{{ .Values.minio.bucket }}

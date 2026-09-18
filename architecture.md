@@ -146,7 +146,12 @@ fde-lab/
   orchestrator/    # LangGraph story-picker (see AGENT-WORKFLOW.md)
   infra/
     docker-compose.yml  # Phase 1-2: local/single-host deployment
-    k8s/                # Phase 4: manifests or Helm chart, per-cohort namespaces
+    k8s/                # Phase 4: per-cohort namespaces (FDE-012)
+      chart/             # Helm chart: one release == one cohort's full stack
+      provisioner/        # small FastAPI service, the only thing holding
+                           # cluster credentials to create cohort namespaces
+      provision_cohort.py # CLI wrapper around provisioner/app/provision.py,
+                           # for direct/ops use against a repo checkout
   intent.md
   architecture.md
   ROADMAP.md
@@ -164,13 +169,51 @@ S3-compatible store (e.g. MinIO). Single host, one cohort at a time. Fast to bui
 and validate the full core loop and, later, multi-cohort isolation logic on a
 simple orchestrator before adding Kubernetes' complexity on top.
 
-**Phase 4: Kubernetes.** Once the LMS integration (Phase 3) is real, multiple
-courses/cohorts can launch concurrently, each needing an isolated environment —
-fresh synthetic data, its own mock services, its own time-box clock. Each cohort
-gets its own Kubernetes namespace, provisioned automatically on LTI launch or
-instructor action. Ingress routes per cohort; the time-boxed scenario lifecycle
-(unlock/close/pivot) maps onto Kubernetes Jobs/CronJobs. Docker Compose remains
-the local development target even after Kubernetes is the production target.
+**Phase 4: Kubernetes.** Implemented (FDE-012) as a Helm chart at
+`infra/k8s/chart/` — one release of the chart is one cohort: its own
+namespace (`cohort-<slug>`), Postgres, Redis, MinIO, `backend`,
+`celery-worker`, `persona-service`, and `frontend`, mirroring
+`infra/docker-compose.yml` service-for-service (the one-shot
+`backend-migrate`/`persona-migrate`/`minio-init` steps become
+`post-install,post-upgrade` Helm hook Jobs; `data-gen` stays a one-off Job
+rendered per scenario-instance setup rather than a standing workload,
+matching its Compose `profiles: tools` treatment). A `NetworkPolicy`
+default-denies cross-namespace traffic and only allows the ingress
+controller's namespace in to the `frontend` Service (AC4) — only the
+frontend is exposed publicly (its own server-side `/api/*` routes already
+reach `backend`/`persona-service`, per the Frontend section above), so
+`backend`/`persona-service`/`celery-worker`/Postgres/Redis/MinIO stay
+ClusterIP-only per namespace. `Ingress` routes on `<cohortId>.<domain>`
+(AC3) — since an Ingress can't reference a Service outside its own
+namespace, cross-cohort routing isn't reachable even by misconfiguration.
+
+Namespace provisioning (AC2) is a small standalone `k8s-provisioner`
+FastAPI service (`infra/k8s/provisioner/`) that runs `helm upgrade
+--install` against the chart — deliberately its own service rather than a
+route on `backend`, since it's the one component in the platform holding
+cluster credentials broad enough to create namespaces, and giving that to
+the public-facing student/instructor API would be a real
+privilege-escalation smell. The instructor-action trigger is real: `POST
+/cohorts/{cohort_id}/provision` on `backend` (`app/routers/cohorts.py`)
+calls it over HTTP. The LTI-launch trigger from `ROADMAP.md`'s "on LTI
+launch, on instructor action" is *not* wired up as of FDE-012 — `backend`
+still has no `/internal/lti-mappings` endpoint for `lti-service` to call at
+all (the gap FDE-011 already flagged), and auto-provisioning cluster
+namespaces off of an unauthenticated LMS launch's 404 would itself be a
+resource-exhaustion vector, not just an incomplete feature. Once
+`/internal/lti-mappings` gains a real *create* path (an instructor linking
+an LMS course to a cohort), that's the point to call the same provisioner
+— tracked as follow-up, not solved here.
+
+The time-boxed scenario lifecycle (unlock/close/pivot) continues to run as
+Celery tasks against `celery-worker` inside each cohort's own namespace,
+not Kubernetes Jobs/CronJobs — Celery/Redis already does ETA-based
+one-shot scheduling (see Backend section above), so there was no need to
+duplicate that with a second scheduling mechanism at the cluster level; if
+that's read as a deviation from this document's original wording, this is
+the correction. Docker Compose remains the local development target even
+after Kubernetes is the production target — nothing above changes
+`infra/docker-compose.yml`.
 
 ## Traceability to intent.md
 
@@ -200,8 +243,7 @@ the local development target even after Kubernetes is the production target.
   standalone service), but that doesn't settle it for the other two
 - Which LMS(s) to target first for Phase 3 (Canvas and Moodle both speak LTI 1.3,
   but roster/grade APIs have platform-specific quirks worth confirming early)
-- Namespace provisioning trigger for Phase 4 — on LTI launch, on instructor action,
-  or both
-
-- Namespace provisioning trigger for Phase 4 — on LTI launch, on instructor action,
--   or both
+- Namespace provisioning trigger for Phase 4 — resolved for the instructor-action
+  path (FDE-012: `POST /cohorts/{cohort_id}/provision`); the LTI-launch path is
+  still open, blocked on `backend` gaining a real `/internal/lti-mappings` create
+  endpoint (see Deployment → Phase 4 above and FDE-011's implementation log)

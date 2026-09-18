@@ -1,0 +1,46 @@
+{{- if .Values.dataGen.scenarioInstanceId }}
+# Equivalent of docker-compose.yml's data-gen service under the "tools"
+# profile: not a standing workload, invoked once per scenario-instance
+# setup. Only rendered when dataGen.scenarioInstanceId is set, e.g.:
+#   helm template . --set cohortId=<id> --set dataGen.scenarioInstanceId=<instance-id> \
+#     --show-only templates/data-gen-job.yaml | kubectl apply -f -
+# (see infra/k8s/README.md). Not installed as part of a normal
+# `helm upgrade --install` for the cohort.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: data-gen-{{ .Values.dataGen.scenarioInstanceId | lower | regexReplaceAll "[^a-z0-9-]+" "-" | trunc 40 | trimSuffix "-" }}
+  namespace: {{ include "cohort.namespace" . }}
+  labels:
+    {{- include "cohort.labels" . | nindent 4 }}
+spec:
+  backoffLimit: 2
+  template:
+    metadata:
+      labels:
+        {{- include "cohort.labels" . | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: data-gen
+          image: {{ .Values.images.dataGen }}
+          imagePullPolicy: {{ .Values.images.pullPolicy }}
+          command: ["python", "-m", "generator", {{ .Values.dataGen.scenarioInstanceId | quote }}]
+          env:
+            - name: FDE_S3_ENDPOINT_URL
+              value: "http://minio:9000"
+            - name: FDE_S3_BUCKET
+              value: {{ .Values.minio.bucket | quote }}
+            - name: FDE_S3_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: cohort-secrets
+                  key: MINIO_ROOT_USER
+            - name: FDE_S3_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: cohort-secrets
+                  key: MINIO_ROOT_PASSWORD
+            - name: FDE_BACKEND_BASE_URL
+              value: "http://backend:8000"
+{{- end }}

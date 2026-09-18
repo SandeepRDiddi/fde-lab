@@ -1,0 +1,40 @@
+# Equivalent of docker-compose.yml's backend-migrate one-shot service
+# (`alembic upgrade head`). Runs as a post-install/post-upgrade hook so it
+# fires once postgres exists, with its own initContainer wait-loop instead
+# of depends_on/service_healthy (which Kubernetes has no direct
+# equivalent for). See infra/k8s/README.md for the residual bootstrap-race
+# caveat this implies for the backend/celery-worker Deployments below.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: backend-migrate
+  namespace: {{ include "cohort.namespace" . }}
+  labels:
+    {{- include "cohort.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        {{- include "cohort.labels" . | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      initContainers:
+        - name: wait-for-postgres
+          image: {{ .Values.postgres.image }}
+          command:
+            - /bin/sh
+            - -c
+            - until pg_isready -h postgres -U {{ .Values.postgres.user | quote }} -d {{ .Values.postgres.db | quote }}; do sleep 2; done
+      containers:
+        - name: backend-migrate
+          image: {{ .Values.images.backend }}
+          imagePullPolicy: {{ .Values.images.pullPolicy }}
+          command: ["alembic", "upgrade", "head"]
+          env:
+            - name: FDE_DATABASE_URL
+              value: {{ include "cohort.databaseUrl" . | quote }}
