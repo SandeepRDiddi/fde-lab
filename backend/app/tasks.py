@@ -3,9 +3,26 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
+from sqlalchemy import update
+
 from app.celery_app import celery_app
 from app.database import SessionLocal
 from app.models import ApprovalStatus, ScenarioInstance, ScenarioStatus, Submission
+
+
+def revoke_task_if_pending(task_id: str | None) -> None:
+    """Best-effort: revoke (and terminate if a worker already picked it up)
+    a scheduled Celery task. An unreachable broker shouldn't block whatever
+    the caller is doing, and under eager execution the task already ran
+    synchronously before this is ever called, so there's nothing to revoke.
+    Shared by the reschedule path (scenario_instances.py) and the manual
+    approval decision path (submissions.py)."""
+    if not task_id or celery_app.conf.task_always_eager:
+        return
+    try:
+        celery_app.control.revoke(task_id, terminate=True)
+    except Exception:
+        pass
 
 
 @celery_app.task(name="scenario.unlock")
@@ -66,14 +83,26 @@ def apply_scenario_pivot(instance_id: str) -> None:
         db.close()
 
 
-def apply_submission_decision(db, submission: Submission, decision: ApprovalStatus) -> None:
+def apply_submission_decision(db, submission: Submission, decision: ApprovalStatus) -> bool:
     """AC3: record the outcome and notify the student. Shared by the manual
     decision route and the auto-decide task below so both paths land in the
-    same place."""
+    same place.
+
+    The update is conditioned on status == pending_review in the same SQL
+    statement (not a separate read-then-write) so a manual decision and the
+    auto-decide task racing each other can't both apply -- whichever's
+    UPDATE runs first wins, the second matches zero rows. Returns whether
+    this call actually applied the decision.
+    """
     now = datetime.now(timezone.utc)
-    submission.status = decision
-    submission.decided_at = now
-    submission.notified_at = now
+    result = db.execute(
+        update(Submission)
+        .where(Submission.id == submission.id, Submission.status == ApprovalStatus.pending_review)
+        .values(status=decision, decided_at=now, notified_at=now)
+    )
+    if result.rowcount == 0:
+        db.rollback()
+        return False
 
     instance = db.get(ScenarioInstance, submission.scenario_instance_id)
     if instance is not None:
@@ -81,6 +110,8 @@ def apply_submission_decision(db, submission: Submission, decision: ApprovalStat
         instance.approval_decided_at = now
 
     db.commit()
+    db.refresh(submission)
+    return True
 
 
 @celery_app.task(name="approval.auto_decide")
@@ -92,11 +123,12 @@ def auto_decide_submission(submission_id: str) -> None:
     db = SessionLocal()
     try:
         submission = db.get(Submission, uuid.UUID(submission_id))
-        if (
-            submission is None
-            or submission.status != ApprovalStatus.pending_review
-            or submission.auto_decision is None
-        ):
+        if submission is None or submission.auto_decision is None:
+            return
+        # apply_submission_decision's own WHERE clause is the real guard
+        # against a race with a manual decision; this check is just a
+        # cheap early-out to skip the UPDATE attempt in the common case.
+        if submission.status != ApprovalStatus.pending_review:
             return
         apply_submission_decision(db, submission, submission.auto_decision)
     finally:

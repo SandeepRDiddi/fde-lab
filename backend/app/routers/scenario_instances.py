@@ -3,7 +3,6 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.celery_app import celery_app
 from app.database import get_db
 from app.models import ScenarioInstance
 from app.schemas import (
@@ -12,7 +11,12 @@ from app.schemas import (
     ScenarioInstanceRead,
     ScenarioInstanceSchedule,
 )
-from app.tasks import apply_scenario_pivot, close_scenario_instance, unlock_scenario_instance
+from app.tasks import (
+    apply_scenario_pivot,
+    close_scenario_instance,
+    revoke_task_if_pending,
+    unlock_scenario_instance,
+)
 
 router = APIRouter(prefix="/scenario-instances", tags=["scenario-instances"])
 
@@ -73,16 +77,8 @@ def schedule_scenario_instance(
     # Revoke any jobs left over from a previous schedule on this instance —
     # otherwise a reschedule leaves the old unlock/close/pivot jobs pending
     # and they still fire at their original times alongside the new ones.
-    # Best-effort: an unreachable broker shouldn't block rescheduling, and
-    # under eager execution (tests) the old jobs already ran synchronously
-    # before this call, so there's nothing left to revoke.
-    if not celery_app.conf.task_always_eager:
-        for old_task_id in (instance.unlock_task_id, instance.close_task_id, instance.pivot_task_id):
-            if old_task_id:
-                try:
-                    celery_app.control.revoke(old_task_id)
-                except Exception:
-                    pass
+    for old_task_id in (instance.unlock_task_id, instance.close_task_id, instance.pivot_task_id):
+        revoke_task_if_pending(old_task_id)
 
     instance.start_at = payload.start_at
     instance.end_at = payload.end_at

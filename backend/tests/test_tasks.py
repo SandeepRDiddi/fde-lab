@@ -160,6 +160,28 @@ def test_auto_decide_submission_missing_submission_is_noop(session_factory):
     tasks.auto_decide_submission(str(uuid.uuid4()))
 
 
+def test_apply_submission_decision_second_call_loses_the_race(session_factory):
+    """Simulates a manual decision and the auto-decide task both reaching
+    apply_submission_decision for the same submission -- only the first
+    should actually apply; the second must not silently overwrite it."""
+    instance_id = _make_instance(session_factory)
+    submission_id = _make_submission(session_factory, instance_id, status=ApprovalStatus.pending_review)
+
+    db = session_factory()
+    submission = db.get(Submission, submission_id)
+    first_applied = tasks.apply_submission_decision(db, submission, ApprovalStatus.approved)
+    second_applied = tasks.apply_submission_decision(db, submission, ApprovalStatus.rejected)
+    db.close()
+
+    assert first_applied is True
+    assert second_applied is False
+
+    db = session_factory()
+    submission = db.get(Submission, submission_id)
+    assert submission.status == ApprovalStatus.approved
+    db.close()
+
+
 def test_pivot_task_is_idempotent(session_factory):
     instance_id = _make_instance(
         session_factory, config={"base": "value"}, pivot_config={"twist": "budget cut"}

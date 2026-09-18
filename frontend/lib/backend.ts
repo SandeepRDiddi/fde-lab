@@ -1,4 +1,4 @@
-import type { ConversationRead, Message, ScenarioInstance } from "./types";
+import type { ConversationRead, Message, ScenarioInstance, SubmissionRecord } from "./types";
 
 // Server-side only — these route to the scenario engine (backend/) and the AI
 // persona service (persona-service/) directly. Kept out of NEXT_PUBLIC_* so
@@ -45,21 +45,17 @@ export async function sendMessage(instanceId: string, studentId: string, message
 }
 
 /**
- * Backend has no submission endpoint yet (see implementation log in
- * stories/FDE-008-student-workspace.md) — this returns null on a 404 so the
- * caller can fall back to the local compliance stand-in, and rethrows any
- * other failure.
+ * Records a submission that already passed the local compliance check
+ * (lib/compliance.ts) against the backend's approval workflow (FDE-007).
+ * Only `content` is accepted by the backend's SubmissionCreate schema — a
+ * submission belongs to one scenario instance, which is already scoped to
+ * one student, so there's no separate student_id to send.
  */
-export async function submitToBackend(
-  instanceId: string,
-  studentId: string,
-  content: string
-): Promise<{ passed: boolean; failures: { rule_id: string; description: string }[] } | null> {
+export async function submitToBackend(instanceId: string, content: string): Promise<SubmissionRecord> {
   const res = await fetch(`${BACKEND_URL}/scenario-instances/${instanceId}/submissions`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ student_id: studentId, content }),
+    body: JSON.stringify({ content }),
   });
-  if (res.status === 404) return null;
-  return asJson(res);
+  return asJson<SubmissionRecord>(res);
 }

@@ -4,11 +4,10 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.celery_app import celery_app
 from app.database import get_db
 from app.models import ApprovalStatus, ScenarioInstance, ScenarioStatus, Submission
 from app.schemas import SubmissionCreate, SubmissionDecision, SubmissionRead
-from app.tasks import apply_submission_decision, auto_decide_submission
+from app.tasks import apply_submission_decision, auto_decide_submission, revoke_task_if_pending
 
 router = APIRouter(prefix="/scenario-instances/{instance_id}/submissions", tags=["submissions"])
 
@@ -79,9 +78,8 @@ def create_submission(
     submission = Submission(
         scenario_instance_id=instance_id,
         content=payload.content,
-        status=ApprovalStatus.submitted,
+        status=ApprovalStatus.pending_review,
     )
-    submission.status = ApprovalStatus.pending_review
     if review_delay_seconds is not None:
         submission.review_deadline_at = datetime.now(timezone.utc) + timedelta(seconds=review_delay_seconds)
         submission.auto_decision = auto_decision
@@ -91,12 +89,18 @@ def create_submission(
     db.refresh(submission)
 
     if submission.review_deadline_at is not None:
-        result = auto_decide_submission.apply_async(
-            args=[str(submission.id)], eta=submission.review_deadline_at
-        )
-        submission.auto_decide_task_id = result.id
-        db.commit()
-        db.refresh(submission)
+        try:
+            result = auto_decide_submission.apply_async(
+                args=[str(submission.id)], eta=submission.review_deadline_at
+            )
+            submission.auto_decide_task_id = result.id
+            db.commit()
+            db.refresh(submission)
+        except Exception:
+            # Broker unreachable -- the submission is already recorded (it
+            # just won't auto-resolve on schedule and needs a manual
+            # decision instead), so this shouldn't fail the request.
+            pass
 
     return submission
 
@@ -124,16 +128,10 @@ def decide_submission(
     if submission.status != ApprovalStatus.pending_review:
         raise HTTPException(status_code=409, detail="Submission is not pending review")
 
-    # Best-effort, same as the reschedule path in scenario_instances.py — an
-    # unreachable broker shouldn't block a manual decision, and under eager
-    # execution (tests) the auto-decide job already ran synchronously before
-    # this call would ever see status == pending_review.
-    if submission.auto_decide_task_id and not celery_app.conf.task_always_eager:
-        try:
-            celery_app.control.revoke(submission.auto_decide_task_id)
-        except Exception:
-            pass
+    revoke_task_if_pending(submission.auto_decide_task_id)
 
-    apply_submission_decision(db, submission, payload.decision)
-    db.refresh(submission)
+    if not apply_submission_decision(db, submission, payload.decision):
+        # Lost a race with the auto-decide task between the check above and
+        # this call -- it already decided the submission first.
+        raise HTTPException(status_code=409, detail="Submission was already decided")
     return submission
