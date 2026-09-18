@@ -32,6 +32,31 @@ def test_send_message_uses_persona_system_prompt(client, seed_scenario_instance,
     assert call["messages"] == [{"role": "user", "content": "What's the top priority this quarter?"}]
 
 
+def test_send_message_gateway_failure_returns_502_and_rolls_back(client, seed_scenario_instance, fake_gateway):
+    from app.gateway import GatewayError
+
+    scenario_id = uuid.uuid4()
+    student_id = uuid.uuid4()
+    seed_scenario_instance(scenario_id, _persona_config())
+
+    def raise_gateway_error(**kwargs):
+        raise GatewayError("PromptOps Gateway request failed: connection refused")
+
+    fake_gateway.complete = raise_gateway_error
+
+    response = client.post(
+        f"/scenario-instances/{scenario_id}/messages",
+        json={"student_id": str(student_id), "message": "Hello?"},
+    )
+
+    assert response.status_code == 502
+
+    history = client.get(
+        f"/scenario-instances/{scenario_id}/messages", params={"student_id": str(student_id)}
+    ).json()["messages"]
+    assert history == []
+
+
 def test_send_message_without_persona_config_is_rejected(client, seed_scenario_instance):
     scenario_id = uuid.uuid4()
     seed_scenario_instance(scenario_id, {})

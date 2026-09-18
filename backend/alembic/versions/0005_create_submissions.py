@@ -16,16 +16,16 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Created once up front and reused with create_type=False on every
-    # column below — letting each column's own DDL try to create the type
-    # (the sa.Enum default) would attempt CREATE TYPE approval_status twice
-    # over for the second/third usage.
+    # A single plain sa.Enum, reused by identity across every column below.
+    # (An earlier version of this migration also called .create() explicitly
+    # up front and passed create_type=False on the columns to try to avoid a
+    # double CREATE TYPE -- that flag doesn't actually suppress create_table's
+    # own before_create attempt, so it hit "type already exists" and rolled
+    # back the whole migration. create_table's automatic checkfirst-based
+    # creation on first use, with no separate pre-create, is what actually
+    # works -- same pattern as scenario_status in 0001.)
     approval_status = sa.Enum(
         "submitted", "pending_review", "approved", "rejected", name="approval_status"
-    )
-    approval_status.create(op.get_bind(), checkfirst=True)
-    approval_status_col = sa.Enum(
-        "submitted", "pending_review", "approved", "rejected", name="approval_status", create_type=False
     )
 
     op.create_table(
@@ -33,9 +33,9 @@ def upgrade() -> None:
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("scenario_instance_id", sa.Uuid(), nullable=False),
         sa.Column("content", sa.String(), nullable=False),
-        sa.Column("status", approval_status_col, nullable=False, server_default=sa.text("'submitted'")),
+        sa.Column("status", approval_status, nullable=False, server_default=sa.text("'submitted'")),
         sa.Column("review_deadline_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("auto_decision", approval_status_col, nullable=True),
+        sa.Column("auto_decision", approval_status, nullable=True),
         sa.Column("auto_decide_task_id", sa.String(), nullable=True),
         sa.Column("decided_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("notified_at", sa.DateTime(timezone=True), nullable=True),
@@ -45,7 +45,7 @@ def upgrade() -> None:
     )
     op.create_index("ix_submissions_scenario_instance_id", "submissions", ["scenario_instance_id"])
 
-    op.add_column("scenario_instances", sa.Column("approval_outcome", approval_status_col, nullable=True))
+    op.add_column("scenario_instances", sa.Column("approval_outcome", approval_status, nullable=True))
     op.add_column(
         "scenario_instances", sa.Column("approval_decided_at", sa.DateTime(timezone=True), nullable=True)
     )

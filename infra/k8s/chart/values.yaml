@@ -34,8 +34,10 @@ redis:
   image: redis:7-alpine
 
 minio:
-  image: minio/minio:latest
-  mcImage: minio/mc:latest
+  # MinIO pulled its images from Docker Hub entirely (minio/minio and
+  # minio/mc both 403 there now) -- quay.io is the current official home.
+  image: quay.io/minio/minio:latest
+  mcImage: quay.io/minio/mc:latest
   rootUser: minioadmin
   rootPassword: minioadmin
   bucket: fde-lab-datasets

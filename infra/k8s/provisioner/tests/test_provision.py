@@ -51,6 +51,9 @@ def test_provision_cohort_invokes_helm_upgrade_install(tmp_path):
     assert cmd[:3] == ["helm", "upgrade", "cohort-acme-cs101"]
     assert "--install" in cmd
     assert "--namespace" in cmd and cmd[cmd.index("--namespace") + 1] == "cohort-acme-cs101"
+    # Without this, helm errors out on the very first provision of any
+    # cohort, since the namespace doesn't exist yet.
+    assert "--create-namespace" in cmd
     assert "--set" in cmd and cmd[cmd.index("--set") + 1] == "cohortId=acme-cs101"
 
 

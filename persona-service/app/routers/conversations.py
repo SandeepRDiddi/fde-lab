@@ -8,7 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.gateway import PromptOpsGatewayClient, get_gateway_client
+from app.gateway import GatewayError, PromptOpsGatewayClient, get_gateway_client
 from app.models import Conversation, Message, MessageRole
 from app.scenario_ref import get_scenario_config, set_scenario_config
 from app.schemas import ConversationRead, MessageRead, PivotRequest, SendMessageRequest
@@ -86,7 +86,14 @@ def send_message(
     gateway_messages = [
         {"role": "user" if m.role == MessageRole.student else "assistant", "content": m.content} for m in history
     ]
-    reply_text = gateway.complete(system_prompt=_build_system_prompt(persona), messages=gateway_messages)
+    try:
+        reply_text = gateway.complete(system_prompt=_build_system_prompt(persona), messages=gateway_messages)
+    except GatewayError as exc:
+        # Roll back the flushed-but-uncommitted student message too -- a
+        # message with no persona reply is a confusing half-turn, not a
+        # useful partial success, so let the student's client retry cleanly.
+        db.rollback()
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
     persona_message = Message(conversation_id=conversation.id, role=MessageRole.persona, content=reply_text)
     db.add(persona_message)

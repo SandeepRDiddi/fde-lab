@@ -60,6 +60,7 @@ def provision_cohort(
         "helm", "upgrade", namespace, str(chart_dir or _default_chart_dir()),
         "--install",
         "--namespace", namespace,
+        "--create-namespace",
         "--set", f"cohortId={cohort_id}",
         "--wait",
         "--timeout", "5m",

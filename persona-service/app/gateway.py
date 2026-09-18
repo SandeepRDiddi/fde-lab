@@ -17,6 +17,10 @@ import httpx
 from app.config import settings
 
 
+class GatewayError(RuntimeError):
+    """PromptOps Gateway was unreachable or returned an error response."""
+
+
 class PromptOpsGatewayClient:
     def __init__(self) -> None:
         self.base_url = settings.promptops_gateway_url
@@ -27,16 +31,22 @@ class PromptOpsGatewayClient:
         self._client = httpx.Client(timeout=30.0)
 
     def complete(self, system_prompt: str, messages: list[dict[str, str]]) -> str:
-        response = self._client.post(
-            f"{self.base_url}/v1/messages",
-            headers={"Authorization": f"Bearer {self.api_key}"},
-            json={
-                "model": self.model,
-                "system": system_prompt,
-                "messages": messages,
-            },
-        )
-        response.raise_for_status()
+        try:
+            response = self._client.post(
+                f"{self.base_url}/v1/messages",
+                headers={"Authorization": f"Bearer {self.api_key}"},
+                json={
+                    "model": self.model,
+                    "system": system_prompt,
+                    "messages": messages,
+                },
+            )
+            response.raise_for_status()
+        except httpx.HTTPError as exc:
+            # Network failure, timeout, or a non-2xx from the gateway --
+            # surface as a clean error instead of an unhandled 500 (a real,
+            # everyday scenario since the gateway isn't part of this repo).
+            raise GatewayError(f"PromptOps Gateway request failed: {exc}") from exc
         data = response.json()
         content = data["content"]
         # The Anthropic Messages API shape this assumes returns `content` as a
