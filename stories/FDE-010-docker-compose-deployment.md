@@ -21,14 +21,14 @@ it was built on.
    (e.g. via separate Compose project names) without state leaking between them.
 
 ## Definition of done
-- [ ] `docker compose up` runs a full scenario end to end on a clean machine
-      (not verified — Docker's own image pulls are stuck/unreachable in this
-      environment, see merge review below; `docker compose config` validates
-      cleanly and the dependency graph was reviewed by hand, but the stack
-      has never actually been started)
-- [ ] Two cohorts run side by side locally without cross-contamination (same
-      caveat — reviewed by hand via distinct project names/port overrides,
-      never run)
+- [x] `docker compose up` runs a full scenario end to end on a clean machine
+      (verified live 2026-09-18, once Docker's pulls recovered — see the
+      second merge-review entry below: full instance-create → schedule →
+      unlock → chat → submit → approve → data-gen-to-MinIO cycle, all
+      against real containers, not a mock)
+- [ ] Two cohorts run side by side locally without cross-contamination (still
+      not verified — the single-cohort run above used one project name/port
+      set; running two side by side wasn't exercised)
 - [x] Story status updated below
 - [x] architecture.md updated if the deployment approach deviates from documented
       (no deviation)
@@ -145,3 +145,63 @@ containers on this machine (`claude-coding-agent-*`, `multi-agent-framework-*`,
 `genai-pulse-bot-qdrant-1`, `datamesh-manager-ce-*`) as a side effect of
 their own restart policies — left running rather than stopped, since killing
 someone else's live containers to "clean up" seemed like the wrong call.
+
+### 2026-09-18 (validation pass — Docker recovered, actually ran it this time)
+The Docker Hub connectivity issue from the entry above turned out to be
+transient (a plain `docker pull hello-world` worked fine on retry later the
+same day). With a live daemon actually reachable, ran the real thing —
+`docker compose build` then `docker compose up -d` under an isolated
+project name and remapped host ports (`COMPOSE_PROJECT_NAME=fde-lab-validate`,
+ports shifted to 13000/18000/18001/19000/19001) so as not to collide with
+the other unrelated containers already running on this machine. Two real
+bugs surfaced that no amount of reading the compose file would have caught:
+
+- **MinIO has pulled `minio/minio` and `minio/mc` off Docker Hub entirely**
+  — both now 403 with "repository does not exist... denied." This is an
+  external, time-dependent break: nothing in this repo's history caused it,
+  and it may well have still been fine on Docker Hub when this story or its
+  first merge review were written. Current official home is
+  `quay.io/minio/minio` / `quay.io/minio/mc`; repointed both
+  `infra/docker-compose.yml` and the Helm chart's `values.yaml` (FDE-012)
+  there, confirmed by actually pulling both from quay.io successfully.
+- **`backend-migrate` failed on a genuinely fresh database** — a bug in
+  FDE-007's migration `0005_create_submissions.py`, not this story's own
+  files, but it blocked "docker compose up ... one full scenario end to
+  end" so it got fixed here rather than filed away: an explicit
+  `CREATE TYPE approval_status` up front, combined with `create_type=False`
+  on the columns to (the author's stated intent) avoid a second
+  `CREATE TYPE` — except `create_type=False` doesn't actually suppress
+  `create_table`'s own `before_create` attempt to create the enum, so it
+  tried to create the same type twice inside one transaction and
+  Postgres's `DuplicateObject` error rolled the whole migration back.
+  Fixed by using a single plain `sa.Enum` shared by identity across all
+  three column uses and dropping the explicit pre-create entirely — the
+  same pattern already proven working in `0001_create_scenario_instances.py`.
+  Reproduced against a real Postgres via `docker compose run --rm
+  backend-migrate alembic upgrade head` both before (confirmed the failure)
+  and after (confirmed 0001→0005 all apply cleanly) the fix.
+- Also found and fixed while chatting through persona-service live:
+  an unreachable PromptOps Gateway (the ordinary case — it isn't part of
+  this repo) produced an unhandled 500 with a half-written student message
+  left flushed. See FDE-004's story log for that fix; caught here because
+  this was the first time anyone actually sent a message against a running
+  persona-service with no gateway behind it.
+
+Once both fixes landed, the full stack came up healthy and a real
+end-to-end run worked: created a scenario instance on the live backend,
+scheduled it (`POST .../schedule`) and watched the real Celery unlock job
+flip it to `active` with `notified_at` set, hit the persona chat endpoint
+(confirmed the clean-502 behavior above), submitted content that passed a
+real `compliance_checklist` rule, approved it through the manual-decision
+endpoint and watched `approval_outcome` land on the instance, listed the
+cohort's instances and the submission through the FDE-009 instructor-console
+endpoints, loaded `/instructor/<cohortId>` itself, and ran
+`docker compose run --rm data-gen python -m generator <instance-id>`
+against the real MinIO — the dataset actually landed in the bucket and
+`dataset_location` was recorded back on the instance. Torn all the way down
+afterward (`docker compose down -v`) with no leftover containers, volumes,
+or network, and the other pre-existing containers on the machine were left
+untouched throughout.
+
+Not run: the second DoD item (two cohorts side by side) — this pass used
+one cohort under one project name/port set throughout.

@@ -125,4 +125,17 @@ content-list parsing, plus a race-condition regression test), backend 20
 passed (1 new: nested-dict pivot merge). Merged via squash, PR #16 closed,
 branch deleted.
 
+### 2026-09-18 (validation pass, found during FDE-010's live docker compose run)
+`PromptOpsGatewayClient.complete()` had no error handling around its
+`httpx.post` call — an unreachable gateway (the everyday case, since
+PromptOps Gateway isn't part of this repo) raised an unhandled exception
+straight through `send_message`, returning a bare 500 and leaving the
+student's message flushed-but-uncommitted in a half-written state. Caught
+live: sent a real chat message against a running `persona-service` with no
+gateway behind it and got exactly that. Fixed: `complete()` now raises a
+clear `GatewayError` on any `httpx.HTTPError`, and `send_message` catches
+it, rolls back the half-turn, and returns a 502 with a readable detail
+instead. Added `test_send_message_gateway_failure_returns_502_and_rolls_back`;
+`pytest -q`: 11 passed.
+
 _(appended by the agent as work happens)_
