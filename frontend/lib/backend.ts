@@ -1,4 +1,12 @@
-import type { ConversationRead, Message, ScenarioInstance, SubmissionRecord } from "./types";
+import type {
+  ApprovalStatus,
+  ConversationRead,
+  Message,
+  ScenarioInstance,
+  ScenarioSchedule,
+  SubmissionDetail,
+  SubmissionRecord,
+} from "./types";
 
 // Server-side only — these route to the scenario engine (backend/) and the AI
 // persona service (persona-service/) directly. Kept out of NEXT_PUBLIC_* so
@@ -58,4 +66,43 @@ export async function submitToBackend(instanceId: string, content: string): Prom
     body: JSON.stringify({ content }),
   });
   return asJson<SubmissionRecord>(res);
+}
+
+/** Instructor console (FDE-009): every scenario instance for a cohort, one per student. */
+export async function listCohortInstances(cohortId: string): Promise<ScenarioInstance[]> {
+  const res = await fetch(`${BACKEND_URL}/scenario-instances?cohort_id=${cohortId}`, { cache: "no-store" });
+  return asJson<ScenarioInstance[]>(res);
+}
+
+/** Instructor console (FDE-009 AC1): set an instance's unlock/close/pivot times. */
+export async function scheduleScenarioInstance(
+  instanceId: string,
+  schedule: ScenarioSchedule
+): Promise<ScenarioInstance> {
+  const res = await fetch(`${BACKEND_URL}/scenario-instances/${instanceId}/schedule`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(schedule),
+  });
+  return asJson<ScenarioInstance>(res);
+}
+
+/** Instructor console (FDE-009 AC3): a student's submission(s) for an instance. */
+export async function listSubmissions(instanceId: string): Promise<SubmissionDetail[]> {
+  const res = await fetch(`${BACKEND_URL}/scenario-instances/${instanceId}/submissions`, { cache: "no-store" });
+  return asJson<SubmissionDetail[]>(res);
+}
+
+/** Instructor console (FDE-009 AC3): manual approve/reject on a pending submission. */
+export async function decideSubmission(
+  instanceId: string,
+  submissionId: string,
+  decision: ApprovalStatus
+): Promise<SubmissionDetail> {
+  const res = await fetch(`${BACKEND_URL}/scenario-instances/${instanceId}/submissions/${submissionId}/decision`, {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ decision }),
+  });
+  return asJson<SubmissionDetail>(res);
 }

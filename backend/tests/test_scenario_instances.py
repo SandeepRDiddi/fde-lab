@@ -72,3 +72,27 @@ def test_set_scenario_instance_dataset_not_found(client):
         json={"dataset_location": "s3://fde-lab-datasets/datasets/abc/def/xyz.jsonl"},
     )
     assert response.status_code == 404
+
+
+def test_list_scenario_instances_filters_by_cohort(client):
+    cohort_id = str(uuid.uuid4())
+    matching = client.post(
+        "/scenario-instances",
+        json={"cohort_id": cohort_id, "student_id": str(uuid.uuid4()), "config": {}},
+    ).json()
+    client.post(
+        "/scenario-instances",
+        json={"cohort_id": str(uuid.uuid4()), "student_id": str(uuid.uuid4()), "config": {}},
+    )
+
+    response = client.get("/scenario-instances", params={"cohort_id": cohort_id})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert [instance["id"] for instance in body] == [matching["id"]]
+
+
+def test_list_scenario_instances_empty_cohort_returns_empty_list(client):
+    response = client.get("/scenario-instances", params={"cohort_id": str(uuid.uuid4())})
+    assert response.status_code == 200
+    assert response.json() == []

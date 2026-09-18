@@ -105,6 +105,19 @@ def create_submission(
     return submission
 
 
+@router.get("", response_model=list[SubmissionRead])
+def list_submissions(instance_id: uuid.UUID, db: Session = Depends(get_db)) -> list[Submission]:
+    """FDE-009 AC3: lets an instructor console find a student's submission(s)
+    for an instance without already knowing a submission id."""
+    _get_instance_or_404(instance_id, db)
+    return (
+        db.query(Submission)
+        .filter(Submission.scenario_instance_id == instance_id)
+        .order_by(Submission.created_at)
+        .all()
+    )
+
+
 @router.get("/{submission_id}", response_model=SubmissionRead)
 def get_submission(
     instance_id: uuid.UUID, submission_id: uuid.UUID, db: Session = Depends(get_db)

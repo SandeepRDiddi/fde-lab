@@ -1,5 +1,7 @@
 export type ScenarioStatus = "not_started" | "active" | "closed";
 
+export type ApprovalStatus = "submitted" | "pending_review" | "approved" | "rejected";
+
 export interface ArtifactInject {
   id: string;
   type: string;
@@ -34,6 +36,8 @@ export interface ScenarioInstance {
   pivot_config: Record<string, unknown> | null;
   pivot_applied_at: string | null;
   notified_at: string | null;
+  approval_outcome: ApprovalStatus | null;
+  approval_decided_at: string | null;
   created_at: string;
 }
 
@@ -59,8 +63,30 @@ export interface RuleFailure {
 
 export interface SubmissionRecord {
   id: string;
-  status: "submitted" | "pending_review" | "approved" | "rejected";
+  status: ApprovalStatus;
   review_deadline_at: string | null;
+}
+
+// Full shape of the backend's SubmissionRead (FDE-007) — the instructor
+// console needs the submission content and decision detail that
+// SubmissionRecord (the student submit-panel's narrower view) doesn't carry.
+export interface SubmissionDetail {
+  id: string;
+  scenario_instance_id: string;
+  content: string;
+  status: ApprovalStatus;
+  review_deadline_at: string | null;
+  auto_decision: ApprovalStatus | null;
+  decided_at: string | null;
+  notified_at: string | null;
+  created_at: string;
+}
+
+export interface ScenarioSchedule {
+  start_at: string;
+  end_at: string;
+  pivot_at?: string | null;
+  pivot_config?: Record<string, unknown> | null;
 }
 
 export interface SubmissionResult {

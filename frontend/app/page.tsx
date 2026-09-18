@@ -4,7 +4,7 @@ export default function HomePage() {
       <h1>FDE Lab</h1>
       <p>
         Student scenario workspaces live at <code>/workspace/[instanceId]</code>. The instructor
-        console (FDE-009) isn&apos;t built yet.
+        console lives at <code>/instructor</code>.
       </p>
     </main>
   );

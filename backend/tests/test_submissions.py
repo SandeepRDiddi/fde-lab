@@ -126,6 +126,22 @@ def test_decision_on_already_decided_submission_conflicts(client):
     assert response.status_code == 409
 
 
+def test_list_submissions_returns_instance_submissions(client):
+    instance = _create_instance(client)
+    created = client.post(f"/scenario-instances/{instance['id']}/submissions", json={"content": "my report"}).json()
+
+    response = client.get(f"/scenario-instances/{instance['id']}/submissions")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert [submission["id"] for submission in body] == [created["id"]]
+
+
+def test_list_submissions_instance_not_found(client):
+    response = client.get(f"/scenario-instances/{uuid.uuid4()}/submissions")
+    assert response.status_code == 404
+
+
 def test_create_submission_instance_not_found(client):
     response = client.post(f"/scenario-instances/{uuid.uuid4()}/submissions", json={"content": "x"})
     assert response.status_code == 404

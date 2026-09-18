@@ -21,6 +21,18 @@ from app.tasks import (
 router = APIRouter(prefix="/scenario-instances", tags=["scenario-instances"])
 
 
+@router.get("", response_model=list[ScenarioInstanceRead])
+def list_scenario_instances(cohort_id: uuid.UUID, db: Session = Depends(get_db)) -> list[ScenarioInstance]:
+    """FDE-009 AC2: an instructor console lists every student's instance for
+    a cohort to show live status, one row per student."""
+    return (
+        db.query(ScenarioInstance)
+        .filter(ScenarioInstance.cohort_id == cohort_id)
+        .order_by(ScenarioInstance.created_at)
+        .all()
+    )
+
+
 @router.post("", response_model=ScenarioInstanceRead, status_code=201)
 def create_scenario_instance(
     payload: ScenarioInstanceCreate, db: Session = Depends(get_db)

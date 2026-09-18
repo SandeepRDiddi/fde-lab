@@ -173,8 +173,73 @@ body {
 }
 
 textarea,
+input,
 button {
   font: inherit;
+}
+
+.schedule-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 1rem;
+}
+
+.schedule-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+.roster-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.roster-table th,
+.roster-table td {
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.approval-badge {
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+
+.approval-submitted,
+.approval-pending_review {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+.approval-approved {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.approval-rejected {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.submission-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.submission-content {
+  white-space: pre-wrap;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
 }
 
 button {
