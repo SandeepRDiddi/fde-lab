@@ -3,7 +3,12 @@ import { getScenarioInstance, submitToBackend, UpstreamError } from "../../../..
 import { evaluateSubmission } from "../../../../../lib/compliance";
 
 export async function POST(req: Request, { params }: { params: { instanceId: string } }) {
-  const body = await req.json();
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ detail: "Request body must be valid JSON" }, { status: 400 });
+  }
   const { student_id: studentId, content } = body as { student_id?: string; content?: string };
   if (!studentId || !content) {
     return NextResponse.json({ detail: "student_id and content are required" }, { status: 400 });

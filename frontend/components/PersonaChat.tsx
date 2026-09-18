@@ -23,8 +23,9 @@ export default function PersonaChat({
 
     setSending(true);
     setError(null);
+    const optimisticId = `pending-${Date.now()}`;
     const optimistic: Message = {
-      id: `pending-${Date.now()}`,
+      id: optimisticId,
       role: "student",
       content: message,
       created_at: new Date().toISOString(),
@@ -42,6 +43,11 @@ export default function PersonaChat({
       const reply = (await res.json()) as Message;
       setMessages((prev) => [...prev, reply]);
     } catch (err) {
+      // Roll back the optimistic entry -- it was never persisted, so
+      // leaving it in place would show a message as sent when it wasn't,
+      // and it'd silently vanish on the next real refetch anyway.
+      setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
+      setDraft(message);
       setError((err as Error).message);
     } finally {
       setSending(false);
@@ -68,7 +74,10 @@ export default function PersonaChat({
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
+            // Skip while an IME composition is in progress -- the Enter that
+            // confirms a composed character (e.g. Japanese/Chinese input)
+            // would otherwise send the message before composition finishes.
+            if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
               e.preventDefault();
               handleSend();
             }

@@ -28,6 +28,9 @@ function checkRule(content: string, rule: ComplianceRule): boolean {
     case "min_length":
       return content.length >= Number(rule.value);
     default:
-      return true;
+      // Fail closed: an unrecognized check type (a new rule kind not yet
+      // handled here, or a malformed rule from the untyped config JSON)
+      // should flag as a failure, not silently pass as satisfied.
+      return false;
   }
 }

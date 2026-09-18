@@ -16,7 +16,12 @@ export async function GET(req: Request, { params }: { params: { instanceId: stri
 }
 
 export async function POST(req: Request, { params }: { params: { instanceId: string } }) {
-  const body = await req.json();
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ detail: "Request body must be valid JSON" }, { status: 400 });
+  }
   const { student_id: studentId, message } = body as { student_id?: string; message?: string };
   if (!studentId || !message) {
     return NextResponse.json({ detail: "student_id and message are required" }, { status: 400 });

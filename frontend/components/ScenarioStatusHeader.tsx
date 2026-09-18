@@ -19,9 +19,13 @@ const STATUS_LABEL: Record<ScenarioInstance["status"], string> = {
 };
 
 export default function ScenarioStatusHeader({ instance }: { instance: ScenarioInstance }) {
-  const [now, setNow] = useState(() => Date.now());
+  // Starts null (not Date.now()) so the server-rendered and pre-hydration
+  // client markup match exactly -- the countdown only appears once the
+  // client has actually mounted and a real "now" is available.
+  const [now, setNow] = useState<number | null>(null);
 
   useEffect(() => {
+    setNow(Date.now());
     if (instance.status !== "active" || !instance.end_at) return;
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
@@ -31,7 +35,7 @@ export default function ScenarioStatusHeader({ instance }: { instance: ScenarioI
     <header className="status-header">
       <div className={`status-badge status-${instance.status}`}>{STATUS_LABEL[instance.status]}</div>
 
-      {instance.status === "active" && instance.end_at && (
+      {instance.status === "active" && instance.end_at && now !== null && (
         <div className="status-remaining">
           Time remaining: <strong>{formatRemaining(new Date(instance.end_at).getTime() - now)}</strong>
         </div>
