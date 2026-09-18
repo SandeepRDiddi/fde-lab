@@ -6,10 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 FDE Lab is a training platform (simulated FDE client engagements for AI/Data
 professionals). Application services are landing one story at a time (see
-`STORIES.md`); `frontend/`, `lti-service/`, and `mocks/` don't exist yet —
-don't invent commands for services that aren't built. `orchestrator/` is
-tooling (a LangGraph script that drives story implementation), not an
-application service.
+`STORIES.md`); `lti-service/` doesn't exist yet — don't invent commands for
+services that aren't built. `orchestrator/` is tooling (a LangGraph script
+that drives story implementation), not an application service.
 
 Each Python service (`backend/`, `data-gen/`, `persona-service/`) is
 independent — its own `requirements.txt`, no shared venv, no dependency on
@@ -20,6 +19,19 @@ Postgres instance, per `architecture.md`). Standard pattern for each:
 cd <service> && python3.11 -m venv .venv && .venv/bin/pip install -r requirements.txt
 FDE_DATABASE_URL="sqlite:///:memory:" .venv/bin/pytest -q   # backend only needs this env var
 .venv/bin/pytest -q                                          # data-gen, persona-service
+```
+
+`frontend/` (FDE-008) is a Next.js app (App Router, TypeScript) that talks to
+`backend/` and `persona-service/` only through its own `/api/*` route
+handlers (server-side fetches to `BACKEND_URL` / `PERSONA_SERVICE_URL`, no
+CORS config needed on either service):
+
+```bash
+cd frontend && npm install
+cp .env.example .env.local   # point at your local backend/persona-service ports
+npm run dev                  # http://localhost:3000/workspace/<instanceId>
+npm run lint
+npm run typecheck
 ```
 
 `backend/` and `persona-service/` both use Alembic; check the migration
