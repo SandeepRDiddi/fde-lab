@@ -26,3 +26,9 @@ One line per merged story (see `AGENT-WORKFLOW.md`).
 - FDE-008: Student scenario workspace — Next.js workspace: status/countdown,
   persona chat, artifact feed, dataset link, submission panel. Fixed a
   hydration mismatch and an optimistic-message leak on send failure. (PR #20)
+- FDE-010: Docker Compose deployment — full stack incl. frontend wired up.
+  Fixed an Alembic version-table collision between backend/persona-service
+  and a minio healthcheck that always failed (curl removed from the image),
+  both of which would have broken a fresh `docker compose up`. Not verified
+  against a live daemon (Docker Hub pulls were stuck in this environment).
+  (PR #21)
