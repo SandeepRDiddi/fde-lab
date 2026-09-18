@@ -14,6 +14,13 @@ class Settings(BaseSettings):
     # Compose deployment target.
     k8s_provisioner_url: str = "http://k8s-provisioner.fde-lab-platform.svc.cluster.local:8000"
 
+    # FDE-005's mock legacy API (mocks/legacy-api). Backend proxies to it
+    # (app/routers/legacy_system.py) so students never need to know its
+    # internal service address, and so the mock's own quirks -- schema
+    # drift, latency, an unhelpful 401 on missing/wrong auth -- come through
+    # to the student exactly as that service produces them.
+    legacy_api_base_url: str = "http://localhost:8005"
+
     model_config = SettingsConfigDict(env_prefix="FDE_", env_file=".env", extra="ignore")
 
 

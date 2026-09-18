@@ -74,6 +74,19 @@ services:
       "
     restart: "no"
 
+  legacy-api:
+    build:
+      context: ../mocks/legacy-api
+    image: fde-lab-legacy-api:local
+    # Internal-only -- the backend proxies to this (app/routers/legacy_system.py)
+    # rather than a student calling it directly, so no host port is published.
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
   backend-migrate:
     build:
       context: ../backend
@@ -105,6 +118,7 @@ services:
     environment:
       FDE_DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-fde}:${POSTGRES_PASSWORD:-fde}@postgres:5432/${POSTGRES_DB:-fde_lab}
       FDE_REDIS_URL: redis://redis:6379/0
+      FDE_LEGACY_API_BASE_URL: http://legacy-api:8000
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     depends_on:

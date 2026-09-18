@@ -18,6 +18,15 @@ export interface ComplianceRule {
   value: string | number;
 }
 
+export interface LegacySystemConfig {
+  scenario_id: string;
+  path: string;
+  auth_header_name?: string;
+  // Free-text hint for what this system is / why the student needs it --
+  // shown in the panel alongside the query form.
+  description?: string;
+}
+
 export interface ScenarioInstance {
   id: string;
   cohort_id: string;
@@ -27,6 +36,7 @@ export interface ScenarioInstance {
     artifacts?: ArtifactInject[];
     compliance_checklist?: ComplianceRule[];
     persona?: { system_prompt?: string; agenda?: string };
+    legacy_system?: LegacySystemConfig;
     [key: string]: unknown;
   };
   dataset_location: string | null;
