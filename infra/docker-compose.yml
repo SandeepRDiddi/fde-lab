@@ -54,20 +54,20 @@ services:
       - "${MINIO_CONSOLE_PORT:-9001}:9001"
     volumes:
       - minio-data:/data
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
+    # No Docker-level healthcheck here: recent minio/minio images dropped
+    # curl (the tool every commonly-copied healthcheck for this image
+    # assumes), so a curl-based check just fails forever and blocks
+    # everything depending on service_healthy. minio-init's own retry loop
+    # below establishes readiness instead.
 
   minio-init:
     image: minio/mc:latest
     depends_on:
       minio:
-        condition: service_healthy
+        condition: service_started
     entrypoint: >
       /bin/sh -c "
-      mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin} &&
+      until mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin} >/dev/null 2>&1; do sleep 1; done &&
       mc mb --ignore-existing local/${S3_BUCKET:-fde-lab-datasets}
       "
     restart: "no"
@@ -164,6 +164,21 @@ services:
       timeout: 5s
       retries: 10
       start_period: 10s
+
+  frontend:
+    build:
+      context: ../frontend
+    image: fde-lab-frontend:local
+    environment:
+      BACKEND_URL: http://backend:8000
+      PERSONA_SERVICE_URL: http://persona-service:8000
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+      persona-service:
+        condition: service_healthy
 
   data-gen:
     build:
