@@ -15,6 +15,12 @@ if config.config_file_name is not None:
 
 target_metadata = Base.metadata
 
+# backend and persona-service share one Postgres database in Docker Compose
+# (infra/docker-compose.yml) but must not share Alembic's bookkeeping table —
+# otherwise backend's own root migration (also "0001") looks already-applied
+# the moment persona-service's runs first, and its tables never get created.
+VERSION_TABLE = "persona_alembic_version"
+
 
 def run_migrations_offline() -> None:
     url = config.get_main_option("sqlalchemy.url")
@@ -23,6 +29,7 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        version_table=VERSION_TABLE,
     )
     with context.begin_transaction():
         context.run_migrations()
@@ -35,7 +42,11 @@ def run_migrations_online() -> None:
         poolclass=pool.NullPool,
     )
     with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            version_table=VERSION_TABLE,
+        )
         with context.begin_transaction():
             context.run_migrations()
 
