@@ -57,7 +57,16 @@ export interface RuleFailure {
   description: string;
 }
 
+export interface SubmissionRecord {
+  id: string;
+  status: "submitted" | "pending_review" | "approved" | "rejected";
+  review_deadline_at: string | null;
+}
+
 export interface SubmissionResult {
   passed: boolean;
   failures: RuleFailure[];
+  // Present once the submission has actually been recorded on the backend's
+  // approval workflow (FDE-007) — only happens when passed is true.
+  submission?: SubmissionRecord;
 }

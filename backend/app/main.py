@@ -1,10 +1,11 @@
 from fastapi import FastAPI
 
-from app.routers import scenario_instances
+from app.routers import scenario_instances, submissions
 
 app = FastAPI(title="FDE Lab — Scenario Engine")
 
 app.include_router(scenario_instances.router)
+app.include_router(submissions.router)
 
 
 @app.get("/health")

@@ -5,7 +5,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
-from app.models import ScenarioStatus
+from app.models import ApprovalStatus, ScenarioStatus
 
 
 class ScenarioInstanceCreate(BaseModel):
@@ -29,6 +29,8 @@ class ScenarioInstanceRead(BaseModel):
     pivot_config: dict | None
     pivot_applied_at: datetime | None
     notified_at: datetime | None
+    approval_outcome: ApprovalStatus | None
+    approval_decided_at: datetime | None
     created_at: datetime
 
 
@@ -52,4 +54,37 @@ class ScenarioInstanceSchedule(BaseModel):
         # offset on one field fails with 422, not an unhandled 500.
         if value is not None and value.tzinfo is None:
             raise ValueError("must include a timezone offset")
+        return value
+
+
+class SubmissionCreate(BaseModel):
+    content: str
+
+
+class SubmissionRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    scenario_instance_id: uuid.UUID
+    content: str
+    status: ApprovalStatus
+    review_deadline_at: datetime | None
+    auto_decision: ApprovalStatus | None
+    decided_at: datetime | None
+    notified_at: datetime | None
+    created_at: datetime
+
+
+class SubmissionDecision(BaseModel):
+    """Manual approve/reject (FDE-007 AC3) — used when a scenario has no
+    configured review delay, or an instructor decides before the
+    auto-decision fires."""
+
+    decision: ApprovalStatus
+
+    @field_validator("decision")
+    @classmethod
+    def _must_be_terminal(cls, value: ApprovalStatus) -> ApprovalStatus:
+        if value not in (ApprovalStatus.approved, ApprovalStatus.rejected):
+            raise ValueError("decision must be 'approved' or 'rejected'")
         return value

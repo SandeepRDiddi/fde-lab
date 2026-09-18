@@ -15,15 +15,18 @@ export async function POST(req: Request, { params }: { params: { instanceId: str
   }
 
   try {
-    const fromBackend = await submitToBackend(params.instanceId, studentId, content);
-    if (fromBackend) return NextResponse.json(fromBackend);
-
-    // No backend submissions endpoint yet — fall back to the local
-    // compliance stand-in (see lib/compliance.ts).
+    // Compliance runs here, before the backend ever sees the submission —
+    // the backend's approval-workflow endpoint (FDE-007) assumes a failing
+    // submission never reaches it (see its own docstring).
     const instance = await getScenarioInstance(params.instanceId);
     const rules = instance.config.compliance_checklist ?? [];
     const result = evaluateSubmission(content, rules);
-    return NextResponse.json(result);
+    if (!result.passed) {
+      return NextResponse.json(result);
+    }
+
+    const submission = await submitToBackend(params.instanceId, content);
+    return NextResponse.json({ ...result, submission });
   } catch (err) {
     const status = err instanceof UpstreamError ? err.status : 502;
     return NextResponse.json({ detail: (err as Error).message }, { status });

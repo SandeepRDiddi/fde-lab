@@ -4,7 +4,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, Enum, String, Uuid
+from sqlalchemy import JSON, DateTime, Enum, ForeignKey, String, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 
@@ -15,6 +15,13 @@ class ScenarioStatus(str, enum.Enum):
     not_started = "not_started"
     active = "active"
     closed = "closed"
+
+
+class ApprovalStatus(str, enum.Enum):
+    submitted = "submitted"
+    pending_review = "pending_review"
+    approved = "approved"
+    rejected = "rejected"
 
 
 class ScenarioInstance(Base):
@@ -54,6 +61,49 @@ class ScenarioInstance(Base):
     unlock_task_id: Mapped[str | None] = mapped_column(nullable=True)
     close_task_id: Mapped[str | None] = mapped_column(nullable=True)
     pivot_task_id: Mapped[str | None] = mapped_column(nullable=True)
+    # Outcome of this instance's approval workflow, recorded once a
+    # submission is approved or rejected (FDE-007 AC3).
+    approval_outcome: Mapped[ApprovalStatus | None] = mapped_column(
+        Enum(ApprovalStatus, name="approval_status"), nullable=True
+    )
+    approval_decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class Submission(Base):
+    """A student's deliverable submission for a scenario instance. Assumed to
+    have already passed the compliance checklist (FDE-006 blocks a failing
+    submission before it reaches this table at all) and progresses through
+    the approval workflow state machine: submitted -> pending_review ->
+    approved/rejected (FDE-007)."""
+
+    __tablename__ = "submissions"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    scenario_instance_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("scenario_instances.id"), nullable=False, index=True
+    )
+    content: Mapped[str] = mapped_column(String, nullable=False)
+    status: Mapped[ApprovalStatus] = mapped_column(
+        Enum(ApprovalStatus, name="approval_status"),
+        nullable=False,
+        default=ApprovalStatus.submitted,
+    )
+    # Set from config["approval_workflow"] at submission time when a scenario
+    # configures a review delay (FDE-007 AC2): the auto-decide job's eta, and
+    # the outcome it applies once it fires.
+    review_deadline_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    auto_decision: Mapped[ApprovalStatus | None] = mapped_column(
+        Enum(ApprovalStatus, name="approval_status"), nullable=True
+    )
+    # Celery task id for the scheduled auto-decide job, so a manual decision
+    # made before the deadline can revoke it (mirrors *_task_id on
+    # ScenarioInstance).
+    auto_decide_task_id: Mapped[str | None] = mapped_column(nullable=True)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

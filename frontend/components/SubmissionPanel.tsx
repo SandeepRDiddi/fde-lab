@@ -59,7 +59,17 @@ export default function SubmissionPanel({
       {result && (
         <div className={`submission-result ${result.passed ? "passed" : "failed"}`}>
           {result.passed ? (
-            <p>All compliance checks passed.</p>
+            <>
+              <p>All compliance checks passed.</p>
+              {result.submission && (
+                <p className="submission-status">
+                  Status: {result.submission.status}
+                  {result.submission.review_deadline_at && (
+                    <> — decision expected by {new Date(result.submission.review_deadline_at).toLocaleString()}</>
+                  )}
+                </p>
+              )}
+            </>
           ) : (
             <>
               <p>Compliance failures:</p>
