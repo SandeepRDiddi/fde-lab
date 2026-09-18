@@ -75,6 +75,7 @@ services:
   backend-migrate:
     build:
       context: ../backend
+    image: fde-lab-backend:local
     environment:
       FDE_DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-fde}:${POSTGRES_PASSWORD:-fde}@postgres:5432/${POSTGRES_DB:-fde_lab}
     depends_on:
@@ -86,6 +87,7 @@ services:
   persona-migrate:
     build:
       context: ../persona-service
+    image: fde-lab-persona:local
     environment:
       FDE_DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-fde}:${POSTGRES_PASSWORD:-fde}@postgres:5432/${POSTGRES_DB:-fde_lab}
     depends_on:
@@ -97,6 +99,7 @@ services:
   backend:
     build:
       context: ../backend
+    image: fde-lab-backend:local
     environment:
       FDE_DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-fde}:${POSTGRES_PASSWORD:-fde}@postgres:5432/${POSTGRES_DB:-fde_lab}
       FDE_REDIS_URL: redis://redis:6379/0
@@ -117,6 +120,7 @@ services:
   celery-worker:
     build:
       context: ../backend
+    image: fde-lab-backend:local
     command: ["celery", "-A", "app.celery_app", "worker", "--loglevel=info"]
     environment:
       FDE_DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-fde}:${POSTGRES_PASSWORD:-fde}@postgres:5432/${POSTGRES_DB:-fde_lab}
@@ -136,6 +140,11 @@ services:
   persona-service:
     build:
       context: ../persona-service
+    image: fde-lab-persona:local
+    extra_hosts:
+      # host.docker.internal resolves automatically on Docker Desktop
+      # (Mac/Windows) but not on native Linux Docker Engine without this.
+      - "host.docker.internal:host-gateway"
     environment:
       FDE_DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-fde}:${POSTGRES_PASSWORD:-fde}@postgres:5432/${POSTGRES_DB:-fde_lab}
       # PromptOps Gateway isn't part of this repo (architecture.md open
