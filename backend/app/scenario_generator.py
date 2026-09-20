@@ -13,11 +13,13 @@ satisfiable with a working query -- an instructor authoring a scenario by
 hand can still combine the two, but the generator doesn't produce that
 combination itself.
 
-Uses the same free local Ollama model persona-service already talks to (see
-persona-service/app/gateway.py) -- not a hosted API, same cost constraint.
-This module duplicates that small HTTP client rather than importing
-persona-service's, per this repo's "each service is independent" convention
-(CLAUDE.md) -- they don't share a venv or import each other's code.
+Talks to the same OpenAI-compatible model backend persona-service talks to
+(see persona-service/app/gateway.py) -- Groq by default (open-weight models,
+free tier, far faster than a local CPU-bound Ollama instance), swappable via
+FDE_PROMPTOPS_GATEWAY_URL/_API_KEY/_MODEL. This module duplicates that small
+HTTP client rather than importing persona-service's, per this repo's "each
+service is independent" convention (CLAUDE.md) -- they don't share a venv or
+import each other's code.
 """
 from __future__ import annotations
 
@@ -56,6 +58,15 @@ KNOWN_DOMAINS: dict[str, list[str]] = {
     ],
 }
 
+# The table name a domain's dataset is queried as. Fixed rather than
+# model-chosen: letting the model invent its own table_name alongside a
+# separately-written reference_query gave it two independent places to name
+# the same table, and it frequently disagreed with itself (e.g. table_name
+# "orders" but "FROM ecommerce_orders" in the query) -- caught live against
+# the real model. One canonical name per domain removes that failure class
+# instead of just detecting it.
+TABLE_NAMES: dict[str, str] = {"ecommerce_orders": "orders", "hr_employees": "employees"}
+
 # Mirrors mocks/legacy-api/scenarios/*.json -- the generator can only pick an
 # already-authored legacy scenario (the mock service has no way to invent a
 # new endpoint from an LLM call), so this is a closed set, not free-form.
@@ -91,12 +102,14 @@ class GeneratorError(Exception):
     into a usable scenario config after a retry."""
 
 
-def _call_ollama(prompt: str, *, client: httpx.Client | None = None) -> str:
+def _call_model_backend(prompt: str, *, client: httpx.Client | None = None) -> str:
     owns_client = client is None
     client = client or httpx.Client(timeout=120.0)
+    headers = {"Authorization": f"Bearer {settings.promptops_gateway_api_key}"} if settings.promptops_gateway_api_key else {}
     try:
         response = client.post(
-            f"{settings.promptops_gateway_url}/api/chat",
+            f"{settings.promptops_gateway_url}/chat/completions",
+            headers=headers,
             json={
                 "model": settings.promptops_gateway_model,
                 "messages": [{"role": "user", "content": prompt}],
@@ -109,11 +122,13 @@ def _call_ollama(prompt: str, *, client: httpx.Client | None = None) -> str:
     finally:
         if owns_client:
             client.close()
-    return response.json()["message"]["content"]
+    return response.json()["choices"][0]["message"]["content"]
 
 
 def _build_prompt(requirement: str, *, correction: str | None = None) -> str:
-    domains_desc = "\n".join(f'- "{name}": columns {cols}' for name, cols in KNOWN_DOMAINS.items())
+    domains_desc = "\n".join(
+        f'- "{name}": table `{TABLE_NAMES[name]}`, columns {cols}' for name, cols in KNOWN_DOMAINS.items()
+    )
     legacy_desc = "\n".join(
         f'- "{key}": {info["description"]}' for key, info in KNOWN_LEGACY_SCENARIOS.items()
     )
@@ -139,9 +154,8 @@ Output exactly this JSON shape:
     "messiness": "<low, medium, or high>"
   }},
   "technical_task": {{
-    "table_name": "<short snake_case table name, e.g. orders>",
     "instructions": "<what the student must write a SQL query to accomplish, referencing the mess in the data>",
-    "reference_query": "<a single read-only SELECT statement, using only the chosen domain's columns, that ACTUALLY implements what instructions describes -- e.g. if the task is about duplicate/messy rows, the query must use DISTINCT, GROUP BY, or an aggregate to actually resolve that, not just select columns unchanged>"
+    "reference_query": "<a single read-only SELECT statement, using ONLY the chosen domain's exact table name and columns below, that ACTUALLY implements what instructions describes -- e.g. if the task is about duplicate/messy rows, the query must use DISTINCT, GROUP BY, or an aggregate to actually resolve that, not just select columns unchanged>"
   }},
   "legacy_system": "<one of the legacy system ids below, or \\"none\\">"
 }}
@@ -202,12 +216,13 @@ def _reference_query_executes(table_name: str, columns: list[str], reference_que
 def _validate(draft: dict) -> tuple[dict | None, str | None]:
     """Returns (config, None) on success or (None, reason) naming the first
     problem worth retrying for. Fields that don't affect whether the
-    scenario actually works (messiness, row_count, table_name) are
-    defaulted instead of failing the whole draft -- only a broken technical
-    task or an unknown domain is worth a retry. No compliance_checklist is
-    ever emitted: a submission's whole content is the SQL query, so a
-    prose-phrasing rule on the same field could never be satisfiable
-    alongside it."""
+    scenario actually works (messiness, row_count) are defaulted instead of
+    failing the whole draft -- only a broken technical task or an unknown
+    domain is worth a retry. technical_task.table_name is never taken from
+    the model at all (see TABLE_NAMES) -- fixed per domain instead. No
+    compliance_checklist is ever emitted: a submission's whole content is
+    the SQL query, so a prose-phrasing rule on the same field could never
+    be satisfiable alongside it."""
     if not isinstance(draft, dict):
         return None, "top-level output must be a JSON object"
 
@@ -227,7 +242,7 @@ def _validate(draft: dict) -> tuple[dict | None, str | None]:
 
     technical_task = draft.get("technical_task") or {}
     reference_query = str(technical_task.get("reference_query") or "").strip()
-    table_name = str(technical_task.get("table_name") or domain).strip() or domain
+    table_name = TABLE_NAMES[domain]
     instructions = str(technical_task.get("instructions") or "").strip()
     if not reference_query:
         return None, "technical_task.reference_query must be a non-empty string"
@@ -242,8 +257,9 @@ def _validate(draft: dict) -> tuple[dict | None, str | None]:
     exec_error = _reference_query_executes(table_name, KNOWN_DOMAINS[domain], reference_query)
     if exec_error is not None:
         return None, (
-            f"technical_task.reference_query failed to run against the {domain} domain's columns "
-            f"{KNOWN_DOMAINS[domain]}: {exec_error}"
+            f'technical_task.reference_query must select FROM a table literally named "{table_name}" '
+            f"(not the domain name {domain!r}) using only its columns {KNOWN_DOMAINS[domain]}; "
+            f"it failed to run: {exec_error}"
         )
     if not instructions:
         instructions = f'Write a query against "{table_name}" that addresses: {reference_query}'
@@ -282,7 +298,7 @@ def generate_scenario_config(requirement: str, *, client: httpx.Client | None = 
     last_error = "no output"
     for attempt in range(2):
         prompt = _build_prompt(requirement, correction=last_error if attempt else None)
-        raw = _call_ollama(prompt, client=client)
+        raw = _call_model_backend(prompt, client=client)
         try:
             draft = _extract_json(raw)
         except GeneratorError as exc:

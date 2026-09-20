@@ -5,7 +5,7 @@ from tests.test_scenario_generator import VALID_DRAFT, _canned
 
 
 def test_draft_endpoint_returns_generated_config(client, monkeypatch):
-    monkeypatch.setattr(gen, "_call_ollama", _canned(json.dumps(VALID_DRAFT)))
+    monkeypatch.setattr(gen, "_call_model_backend", _canned(json.dumps(VALID_DRAFT)))
 
     response = client.post("/scenario-generator/draft", json={"requirement": "orders keep duplicating"})
 
@@ -16,7 +16,7 @@ def test_draft_endpoint_returns_generated_config(client, monkeypatch):
 
 
 def test_draft_endpoint_502_on_generator_failure(client, monkeypatch):
-    monkeypatch.setattr(gen, "_call_ollama", _canned("garbage", "still garbage"))
+    monkeypatch.setattr(gen, "_call_model_backend", _canned("garbage", "still garbage"))
 
     response = client.post("/scenario-generator/draft", json={"requirement": "anything"})
 
@@ -30,7 +30,7 @@ def test_generated_config_is_accepted_by_scenario_instance_creation(client, monk
     it correctly."""
     import uuid
 
-    monkeypatch.setattr(gen, "_call_ollama", _canned(json.dumps(VALID_DRAFT)))
+    monkeypatch.setattr(gen, "_call_model_backend", _canned(json.dumps(VALID_DRAFT)))
     draft = client.post("/scenario-generator/draft", json={"requirement": "orders keep duplicating"}).json()
 
     response = client.post(

@@ -45,16 +45,17 @@ minio:
 
 # PromptOps Gateway is an external dependency, not part of this chart
 # (architecture.md open question) -- point this at wherever it actually
-# runs for the target cluster.
-# No real PromptOps Gateway exists yet. Locally (docker-compose.yml) this
-# points at Ollama on the host machine for a free, open-source-model dev
-# loop; on a real cluster there's no host machine to reach the same way, so
-# this still points at a placeholder in-cluster gateway hostname -- swap in
-# either a real gateway or a deployed Ollama Service once one exists here.
+# runs for the target cluster. No real PromptOps Gateway exists yet.
+# Locally (docker-compose.yml) this defaults to Groq's OpenAI-compatible
+# endpoint for a free, no-hosted-frontier-API-cost dev loop; on a real
+# cluster there's no equivalent default, so this still points at a
+# placeholder in-cluster hostname -- swap in either a real gateway or Groq
+# directly (https://api.groq.com/openai/v1, apiKey via the cohort-secrets
+# Secret) once one exists here.
 promptopsGateway:
   url: "http://promptops-gateway.fde-lab-platform.svc.cluster.local:8100"
   apiKey: ""
-  model: "llama3.2:3b"
+  model: "openai/gpt-oss-20b"
 
 # data-gen never runs as a standing Deployment (same as its "profiles:
 # tools" one-off treatment in docker-compose.yml) -- templates/data-gen-job.yaml

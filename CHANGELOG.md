@@ -43,12 +43,41 @@ One line per merged story (see `AGENT-WORKFLOW.md`).
   `--create-namespace` that would have broken provisioning any brand-new
   cohort. LTI-launch auto-provisioning still not wired (needs
   `/internal/lti-mappings` on the backend first). (PR #24)
+- 2026-09-20 — Moved the model backend (persona chat and the scenario
+  generator) from local Ollama to Groq's free tier: local CPU inference was
+  slow and competed with the host machine for resources. Both
+  `persona-service/app/gateway.py` and `backend/app/scenario_generator.py`
+  now speak the OpenAI-compatible chat/completions contract (Groq, Together,
+  DeepInfra, OpenRouter, and Ollama's own `/v1` endpoint all share it), so
+  switching provider is an env-var change (`FDE_PROMPTOPS_GATEWAY_URL/
+  _API_KEY/_MODEL`), not a rewrite — a local Ollama setup with no API key
+  still works by pointing the URL at its `/v1` path. Still open-weight
+  models only, no paid frontier-model API. Result: ~1.5-4s per generation
+  (down from 8-40s on local CPU Ollama) at effectively no cost for a
+  training lab's volume.
+
+  Live testing surfaced two more issues before this was called done:
+  Groq had already retired the model id first configured
+  (`llama-3.1-8b-instant` 404'd — "does not exist or you do not have
+  access to it"); switched to `openai/gpt-oss-20b`, currently live on
+  Groq's `/v1/models` list. Separately, the scenario generator's
+  `technical_task.reference_query` sometimes failed to execute because the
+  model's own `table_name` field and the table name inside its
+  `reference_query` disagreed (e.g. `table_name: "orders"` but
+  `FROM ecommerce_orders`) — fixed by no longer letting the model choose
+  `table_name` at all; it's now fixed per domain
+  (`scenario_generator.TABLE_NAMES`) and given to the model as a
+  constraint, removing the whole failure class instead of just detecting
+  it.
 - FDE-014: Scenario generator — an instructor pastes a raw client
   requirement and the backend drafts a full scenario config (persona,
   synthetic-dataset shape, a graded technical task with a validated
-  reference query, a compliance checklist, optionally a legacy-system
-  quirk) via the local Ollama model, for review before creating a real
-  instance. The other half of FDE-013: that story made submissions gradable
+  reference query, optionally a legacy-system quirk) via the configured
+  model backend, for review before creating a real instance. Deliberately
+  never emits a compliance checklist alongside the technical task — a
+  submission has one content field, used for the graded query, so a prose
+  rule on it could never be jointly satisfiable (caught live, see the story
+  log). The other half of FDE-013: that story made submissions gradable
   by execution; this one makes the scenarios themselves generatable instead
   of hand-authored JSON.
 - FDE-013: Technical deliverable grading — a scenario can require a real SQL

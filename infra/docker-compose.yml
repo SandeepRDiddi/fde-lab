@@ -125,11 +125,14 @@ services:
       FDE_S3_BUCKET: ${S3_BUCKET:-fde-lab-datasets}
       FDE_S3_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
       FDE_S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
-      # FDE-014: scenario generator, same free local Ollama instance
-      # persona-service already talks to -- see that service's own comment
-      # on this same env var for why (no hosted-API cost for a training lab).
-      FDE_PROMPTOPS_GATEWAY_URL: http://host.docker.internal:11434
-      FDE_PROMPTOPS_GATEWAY_MODEL: llama3.2:3b
+      # FDE-014: scenario generator, same model backend persona-service
+      # talks to -- see that service's own comment on this var for why
+      # (Groq by default: open-weight models, free tier, no hosted-API
+      # cost). Same override vars as persona-service below, so one Groq key
+      # in .env covers both services.
+      FDE_PROMPTOPS_GATEWAY_URL: ${PROMPTOPS_GATEWAY_URL:-https://api.groq.com/openai/v1}
+      FDE_PROMPTOPS_GATEWAY_API_KEY: ${PROMPTOPS_GATEWAY_API_KEY:-}
+      FDE_PROMPTOPS_GATEWAY_MODEL: ${PROMPTOPS_GATEWAY_MODEL:-openai/gpt-oss-20b}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
@@ -179,14 +182,16 @@ services:
     environment:
       FDE_DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-fde}:${POSTGRES_PASSWORD:-fde}@postgres:5432/${POSTGRES_DB:-fde_lab}
       # PromptOps Gateway isn't part of this repo (architecture.md open
-      # question) — defaults to a local Ollama instance on the host machine
-      # (free, no hosted-API cost for a training lab). Requires Ollama
-      # running on the host with the configured model already pulled
-      # (`ollama pull llama3.2:3b`). Override PROMPTOPS_GATEWAY_URL once a real
-      # gateway exists.
-      FDE_PROMPTOPS_GATEWAY_URL: ${PROMPTOPS_GATEWAY_URL:-http://host.docker.internal:11434}
+      # question) — defaults to Groq (open-weight models on dedicated
+      # inference hardware, free tier, no hosted-frontier-API cost for a
+      # training lab; far faster than a local CPU-bound Ollama instance was).
+      # Set PROMPTOPS_GATEWAY_API_KEY in .env (console.groq.com, free
+      # signup). Override PROMPTOPS_GATEWAY_URL to point at a real gateway
+      # later, or back at a local Ollama's /v1 endpoint to go fully local/
+      # free again (no key needed in that case).
+      FDE_PROMPTOPS_GATEWAY_URL: ${PROMPTOPS_GATEWAY_URL:-https://api.groq.com/openai/v1}
       FDE_PROMPTOPS_GATEWAY_API_KEY: ${PROMPTOPS_GATEWAY_API_KEY:-}
-      FDE_PROMPTOPS_GATEWAY_MODEL: ${PROMPTOPS_GATEWAY_MODEL:-llama3.2:3b}
+      FDE_PROMPTOPS_GATEWAY_MODEL: ${PROMPTOPS_GATEWAY_MODEL:-openai/gpt-oss-20b}
     ports:
       - "${PERSONA_PORT:-8001}:8000"
     depends_on:

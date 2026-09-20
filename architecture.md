@@ -54,7 +54,7 @@ time-based:
 
 This mirrors the FastAPI + Celery + Redis stack already proven on `genai-pulse-bot`.
 
-### AI persona service — Claude via PromptOps Gateway
+### AI persona service — open-weight model via PromptOps Gateway
 Each scenario defines a persona: a system prompt encoding personality, agenda, and
 what the persona does/doesn't know, plus per-student conversation state. Persona
 calls route through [[promptops-gateway]] rather than hitting the Claude API
@@ -77,11 +77,19 @@ conversation — either path below picks this up automatically:
 - `POST /scenario-instances/{id}/persona/pivot` updates `agenda` the same way,
   for a manual/instructor-triggered pivot outside the scripted-time path.
 Neither path calls the other — they're two independent ways to reach the same
-`config["persona"]` update, not a call chain. The gateway's exact wire contract
-isn't documented anywhere in
-this repo yet, so `app/gateway.py` assumes it proxies the Anthropic Messages API
-shape (`model` / `system` / `messages` in, text out) — worth confirming against
-the real PromptOps Gateway API before Phase 1 integration testing.
+`config["persona"]` update, not a call chain. No real PromptOps Gateway exists
+yet, and a hosted frontier-model API (Claude, GPT) costs real money per call
+for a training lab, so `app/gateway.py` talks to an open-weight model via the
+OpenAI-compatible chat/completions contract instead — the shape Groq,
+Together, DeepInfra, OpenRouter, and Ollama's own `/v1` endpoint all share, so
+switching provider is a URL/key/model env-var change, not a rewrite. Defaults
+to Groq (`FDE_PROMPTOPS_GATEWAY_URL=https://api.groq.com/openai/v1`, model
+`openai/gpt-oss-20b`) — free tier, and inference-hardware-backed so it isn't
+competing with the host machine's own CPU/GPU the way a local Ollama instance
+was; `FDE_PROMPTOPS_GATEWAY_URL` can still be pointed at a local Ollama's
+`/v1` path (no API key needed) to go fully local again, or at a real
+PromptOps Gateway once one exists. `backend/app/scenario_generator.py`
+(FDE-014) talks to the same backend via the same env vars.
 
 ### Enterprise system mocks
 Three purpose-built services reproducing the "someone else's constraints" friction:
@@ -153,9 +161,9 @@ columns.
 FDE-013 made a submission gradable by execution instead of only by keyword;
 FDE-014 does the same for the scenario itself — instead of an instructor
 hand-writing a scenario's JSON config, `backend/app/scenario_generator.py`
-drafts one from a raw requirement via the same local Ollama model
-persona-service uses (`FDE_PROMPTOPS_GATEWAY_URL`/`_MODEL`, duplicated
-config rather than shared, per this repo's independent-services
+drafts one from a raw requirement via the same model backend
+persona-service uses (`FDE_PROMPTOPS_GATEWAY_URL`/`_API_KEY`/`_MODEL`,
+duplicated config rather than shared, per this repo's independent-services
 convention). The model can only choose from what the rest of the platform
 actually knows how to run — data-gen's two domains
 (`ecommerce_orders`/`hr_employees`, mirrored column lists) and the two
