@@ -43,6 +43,14 @@ One line per merged story (see `AGENT-WORKFLOW.md`).
   `--create-namespace` that would have broken provisioning any brand-new
   cohort. LTI-launch auto-provisioning still not wired (needs
   `/internal/lti-mappings` on the backend first). (PR #24)
+- FDE-014: Scenario generator — an instructor pastes a raw client
+  requirement and the backend drafts a full scenario config (persona,
+  synthetic-dataset shape, a graded technical task with a validated
+  reference query, a compliance checklist, optionally a legacy-system
+  quirk) via the local Ollama model, for review before creating a real
+  instance. The other half of FDE-013: that story made submissions gradable
+  by execution; this one makes the scenarios themselves generatable instead
+  of hand-authored JSON.
 - FDE-013: Technical deliverable grading — a scenario can require a real SQL
   query, graded by actually running it against the scenario's own synthetic
   dataset and comparing its result to a reference query's, instead of only

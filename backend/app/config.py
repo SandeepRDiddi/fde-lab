@@ -29,6 +29,13 @@ class Settings(BaseSettings):
     s3_access_key: str = "minioadmin"
     s3_secret_key: str = "minioadmin"
 
+    # FDE-014: scenario generator drafts a scenario's config from a raw
+    # instructor requirement via the same free local Ollama model
+    # persona-service already uses (see persona-service/app/gateway.py) --
+    # not a hosted API, per the same cost constraint.
+    promptops_gateway_url: str = "http://host.docker.internal:11434"
+    promptops_gateway_model: str = "llama3.2:3b"
+
     model_config = SettingsConfigDict(env_prefix="FDE_", env_file=".env", extra="ignore")
 
 

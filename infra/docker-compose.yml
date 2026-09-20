@@ -125,6 +125,13 @@ services:
       FDE_S3_BUCKET: ${S3_BUCKET:-fde-lab-datasets}
       FDE_S3_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
       FDE_S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      # FDE-014: scenario generator, same free local Ollama instance
+      # persona-service already talks to -- see that service's own comment
+      # on this same env var for why (no hosted-API cost for a training lab).
+      FDE_PROMPTOPS_GATEWAY_URL: http://host.docker.internal:11434
+      FDE_PROMPTOPS_GATEWAY_MODEL: llama3.2:3b
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     depends_on:

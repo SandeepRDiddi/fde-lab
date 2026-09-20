@@ -38,6 +38,18 @@ export interface TechnicalTask {
   compare?: "unordered_rows" | "ordered_rows";
 }
 
+// FDE-014: full scenario config the generator drafts from a raw requirement
+// -- the same shape POST /scenario-instances' config accepts. Never carries
+// compliance_checklist: a submission's whole content is the SQL query, so a
+// prose-phrasing rule on that same field couldn't be jointly satisfiable
+// with a working query (see backend/app/scenario_generator.py).
+export interface GeneratedScenarioConfig {
+  persona: { system_prompt: string; agenda: string };
+  data_gen: { domain: string; messiness: "low" | "medium" | "high" };
+  technical_task: TechnicalTask;
+  legacy_system?: LegacySystemConfig;
+}
+
 export interface ScenarioInstance {
   id: string;
   cohort_id: string;
@@ -49,6 +61,7 @@ export interface ScenarioInstance {
     persona?: { system_prompt?: string; agenda?: string };
     legacy_system?: LegacySystemConfig;
     technical_task?: TechnicalTask;
+    data_gen?: { domain: string; messiness: "low" | "medium" | "high"; row_count?: number };
     [key: string]: unknown;
   };
   dataset_location: string | null;

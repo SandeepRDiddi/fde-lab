@@ -57,6 +57,13 @@ class ScenarioInstanceSchedule(BaseModel):
         return value
 
 
+class ScenarioDraftRequest(BaseModel):
+    """FDE-014: a raw, messy instructor requirement to turn into a scenario
+    config."""
+
+    requirement: str
+
+
 class SubmissionCreate(BaseModel):
     content: str
 

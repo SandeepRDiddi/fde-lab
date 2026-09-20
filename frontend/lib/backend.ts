@@ -1,6 +1,7 @@
 import type {
   ApprovalStatus,
   ConversationRead,
+  GeneratedScenarioConfig,
   Message,
   ScenarioInstance,
   ScenarioSchedule,
@@ -91,6 +92,35 @@ export async function submitToBackend(instanceId: string, content: string): Prom
 
   const submission = await asJson<SubmissionRecord>(res);
   return { passed: true, failures: [], submission };
+}
+
+/**
+ * FDE-014: drafts a full scenario config from a raw instructor requirement
+ * via the backend's scenario generator (Ollama-backed) -- not persisted,
+ * just returned for review before createScenarioInstance below.
+ */
+export async function generateScenarioDraft(requirement: string): Promise<GeneratedScenarioConfig> {
+  const res = await fetch(`${BACKEND_URL}/scenario-generator/draft`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ requirement }),
+  });
+  return asJson<GeneratedScenarioConfig>(res);
+}
+
+/** Creates a scenario instance for one student in a cohort, from any config
+ * (typically a generator draft, possibly edited). */
+export async function createScenarioInstance(
+  cohortId: string,
+  studentId: string,
+  config: Record<string, unknown>
+): Promise<ScenarioInstance> {
+  const res = await fetch(`${BACKEND_URL}/scenario-instances`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ cohort_id: cohortId, student_id: studentId, config }),
+  });
+  return asJson<ScenarioInstance>(res);
 }
 
 /** Instructor console (FDE-009): every scenario instance for a cohort, one per student. */

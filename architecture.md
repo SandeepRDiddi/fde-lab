@@ -149,6 +149,33 @@ new client-facing contract was needed. A passing submission records what was
 graded (`Submission.grading_result`) alongside the existing approval-workflow
 columns.
 
+### Scenario generator
+FDE-013 made a submission gradable by execution instead of only by keyword;
+FDE-014 does the same for the scenario itself — instead of an instructor
+hand-writing a scenario's JSON config, `backend/app/scenario_generator.py`
+drafts one from a raw requirement via the same local Ollama model
+persona-service uses (`FDE_PROMPTOPS_GATEWAY_URL`/`_MODEL`, duplicated
+config rather than shared, per this repo's independent-services
+convention). The model can only choose from what the rest of the platform
+actually knows how to run — data-gen's two domains
+(`ecommerce_orders`/`hr_employees`, mirrored column lists) and the two
+pre-authored legacy-mock scenarios (`acme-crm`/`northwind-erp`) — not
+free-form invention, since nothing downstream could serve a domain or
+endpoint that doesn't already exist. The drafted `technical_task.reference_query`
+is executed against an empty table shaped like the chosen domain before the
+draft is ever returned, catching a hallucinated column immediately rather
+than at first student submission; a broken or unparseable draft is retried
+once with the specific error fed back to the model, then surfaced as a
+clean failure rather than handed to the instructor broken.
+`POST /scenario-generator/draft` returns the draft for review — it isn't
+persisted itself, an instructor creates the real instance via the
+already-existing `POST /scenario-instances` with the (optionally edited)
+result, so the generator adds no new creation path, only a new way to
+produce that endpoint's input. Data-gen's dataset is still not
+auto-triggered on instance creation (see below) — a freshly generated
+scenario needs that one manual step before its technical task has anything
+to grade against.
+
 ### Data layer
 - **Postgres** — cohorts, students, scenario definitions, submissions, scores
 - **Redis** — task queue and live session state for time-boxing

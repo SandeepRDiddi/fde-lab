@@ -11,6 +11,7 @@ import {
   X,
 } from "lucide-react";
 import AppShell from "./AppShell";
+import ScenarioGenerator from "./ScenarioGenerator";
 import type { ApprovalStatus, ScenarioInstance, SubmissionDetail } from "../lib/types";
 
 const STATUS_LABEL: Record<ScenarioInstance["status"], string> = {
@@ -146,6 +147,8 @@ export default function InstructorConsole({
           <h1>Cohort console</h1>
           <p className="page-subtitle">Schedule this cohort&apos;s scenario and review student progress.</p>
         </div>
+
+        <ScenarioGenerator cohortId={cohortId} onCreated={refresh} />
 
         <section className="card">
           <div className="card-header">

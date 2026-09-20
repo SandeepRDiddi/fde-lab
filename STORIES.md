@@ -21,6 +21,7 @@ file's own `Status` field; keep this table in sync when a story moves.
 | FDE-011 | LTI 1.3 launch service | P1 | FDE-001 | Done |
 | FDE-012 | Kubernetes migration | P1 | FDE-010, FDE-011 | Done |
 | FDE-013 | Technical deliverable grading | P1 | FDE-001, FDE-003, FDE-006, FDE-007 | Done |
+| FDE-014 | Scenario generator | P1 | FDE-001, FDE-003, FDE-004, FDE-005, FDE-006, FDE-013 | Done |
 
 ## Pick-up order
 
