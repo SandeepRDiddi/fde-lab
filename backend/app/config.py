@@ -21,6 +21,14 @@ class Settings(BaseSettings):
     # to the student exactly as that service produces them.
     legacy_api_base_url: str = "http://localhost:8005"
 
+    # FDE-013: technical-task grading fetches the scenario's own synthetic
+    # dataset (data-gen's output) to grade a submitted SQL query against --
+    # same bucket/credentials shape as generator/config.py in data-gen/.
+    s3_endpoint_url: str = "http://localhost:9000"
+    s3_bucket: str = "fde-lab-datasets"
+    s3_access_key: str = "minioadmin"
+    s3_secret_key: str = "minioadmin"
+
     model_config = SettingsConfigDict(env_prefix="FDE_", env_file=".env", extra="ignore")
 
 

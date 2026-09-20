@@ -261,7 +261,9 @@ export default function InstructorConsole({
                   </span>
                 </p>
                 <p className="empty-state">
-                  Compliance: passed — submissions are only recorded once they clear the compliance checklist.
+                  {submission.grading_result
+                    ? `Auto-graded (${submission.grading_result.task_type}): correct — a technical task submission is only recorded once it's actually run and checked, not just compliance-gated.`
+                    : "Compliance: passed — submissions are only recorded once they clear the compliance checklist."}
                 </p>
                 <pre className="submission-content">{submission.content}</pre>
                 {submission.status === "pending_review" && (

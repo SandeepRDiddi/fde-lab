@@ -39,7 +39,12 @@ export default function WorkspaceClient({
           </div>
         )}
 
-        <SubmissionPanel instanceId={instance.id} studentId={instance.student_id} canSubmit={isActive} />
+        <SubmissionPanel
+          instanceId={instance.id}
+          studentId={instance.student_id}
+          canSubmit={isActive}
+          technicalTask={instance.config.technical_task}
+        />
       </main>
     </AppShell>
   );

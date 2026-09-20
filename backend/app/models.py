@@ -76,9 +76,12 @@ class Submission(Base):
     """A student's deliverable submission for a scenario instance. Only ever
     created after passing the compliance checklist -- app/compliance.py
     evaluates it server-side in create_submission and rejects a failing one
-    (422) before a row is ever written here. Progresses through the
-    approval workflow state machine: submitted -> pending_review ->
-    approved/rejected (FDE-007)."""
+    (422) before a row is ever written here. When the scenario also
+    configures config["technical_task"] (FDE-013), content must additionally
+    pass app/grading.py's correctness check (e.g. a SQL query run against the
+    scenario's own synthetic dataset) before the row is written. Progresses
+    through the approval workflow state machine: submitted -> pending_review
+    -> approved/rejected (FDE-007)."""
 
     __tablename__ = "submissions"
 
@@ -103,6 +106,11 @@ class Submission(Base):
     # made before the deadline can revoke it (mirrors *_task_id on
     # ScenarioInstance).
     auto_decide_task_id: Mapped[str | None] = mapped_column(nullable=True)
+    # Set at creation time when config["technical_task"] is configured (FDE-013)
+    # -- records what was graded and the pass/fail detail, so the instructor
+    # console can show a submission was auto-graded rather than reviewed on
+    # prose alone.
+    grading_result: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(

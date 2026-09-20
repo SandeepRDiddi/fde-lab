@@ -119,6 +119,12 @@ services:
       FDE_DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-fde}:${POSTGRES_PASSWORD:-fde}@postgres:5432/${POSTGRES_DB:-fde_lab}
       FDE_REDIS_URL: redis://redis:6379/0
       FDE_LEGACY_API_BASE_URL: http://legacy-api:8000
+      # FDE-013: grading a technical-task submission fetches the scenario's
+      # own synthetic dataset from the same MinIO bucket data-gen writes to.
+      FDE_S3_ENDPOINT_URL: http://minio:9000
+      FDE_S3_BUCKET: ${S3_BUCKET:-fde-lab-datasets}
+      FDE_S3_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      FDE_S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     depends_on:
@@ -126,6 +132,8 @@ services:
         condition: service_completed_successfully
       redis:
         condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"]
       interval: 10s

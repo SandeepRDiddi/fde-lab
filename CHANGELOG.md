@@ -43,6 +43,11 @@ One line per merged story (see `AGENT-WORKFLOW.md`).
   `--create-namespace` that would have broken provisioning any brand-new
   cohort. LTI-launch auto-provisioning still not wired (needs
   `/internal/lti-mappings` on the backend first). (PR #24)
+- FDE-013: Technical deliverable grading — a scenario can require a real SQL
+  query, graded by actually running it against the scenario's own synthetic
+  dataset and comparing its result to a reference query's, instead of only
+  grading submission prose by keyword. Closes the gap where a submission
+  could describe a correct fix without the fix actually being correct.
 - 2026-09-18 — Wired the FDE-005 legacy-system mock into the student flow:
   it had shipped as a standalone service with nothing calling it. Added a
   backend proxy endpoint and a workspace panel to query it; verified live

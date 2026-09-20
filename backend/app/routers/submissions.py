@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.compliance import evaluate_submission
 from app.database import get_db
+from app.grading import GradingError, evaluate_technical_submission
 from app.models import ApprovalStatus, ScenarioInstance, ScenarioStatus, Submission
 from app.schemas import SubmissionCreate, SubmissionDecision, SubmissionRead
 from app.tasks import apply_submission_decision, auto_decide_submission, revoke_task_if_pending
@@ -70,6 +71,9 @@ def create_submission(
     enforcement point, not just a client-side check the frontend could skip
     by calling this endpoint directly. A failing submission is rejected
     (422) and never persisted; only a passing one moves to pending_review.
+    FDE-013 AC1-2: when the scenario also configures config["technical_task"],
+    content must additionally pass app/grading.py's correctness check (run
+    against the instance's own synthetic dataset) -- both gates must pass.
     AC2: optionally schedules an auto-decision per the scenario's configured
     review delay."""
     instance = _get_instance_or_404(instance_id, db)
@@ -84,12 +88,29 @@ def create_submission(
             detail={"message": "Submission failed the compliance checklist", "failures": failures},
         )
 
+    grading_result: dict | None = None
+    technical_task = instance.config.get("technical_task")
+    if technical_task:
+        try:
+            graded_passed, grading_failures = evaluate_technical_submission(
+                payload.content, instance.dataset_location, technical_task
+            )
+        except GradingError as exc:
+            raise HTTPException(status_code=422, detail={"message": str(exc), "failures": []}) from exc
+        if not graded_passed:
+            raise HTTPException(
+                status_code=422,
+                detail={"message": "Submission failed the technical task's grader", "failures": grading_failures},
+            )
+        grading_result = {"task_type": technical_task.get("task_type"), "passed": True}
+
     review_delay_seconds, auto_decision = _parse_approval_config(instance.config)
 
     submission = Submission(
         scenario_instance_id=instance_id,
         content=payload.content,
         status=ApprovalStatus.pending_review,
+        grading_result=grading_result,
     )
     if review_delay_seconds is not None:
         submission.review_deadline_at = datetime.now(timezone.utc) + timedelta(seconds=review_delay_seconds)

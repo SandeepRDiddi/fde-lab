@@ -27,6 +27,17 @@ export interface LegacySystemConfig {
   description?: string;
 }
 
+// FDE-013: a scenario can require a real, auto-graded deliverable (currently
+// a read-only SQL query run against the scenario's own synthetic dataset)
+// instead of grading submission text by keyword alone.
+export interface TechnicalTask {
+  task_type: "sql_query";
+  table_name: string;
+  instructions?: string;
+  reference_query: string;
+  compare?: "unordered_rows" | "ordered_rows";
+}
+
 export interface ScenarioInstance {
   id: string;
   cohort_id: string;
@@ -37,6 +48,7 @@ export interface ScenarioInstance {
     compliance_checklist?: ComplianceRule[];
     persona?: { system_prompt?: string; agenda?: string };
     legacy_system?: LegacySystemConfig;
+    technical_task?: TechnicalTask;
     [key: string]: unknown;
   };
   dataset_location: string | null;
@@ -75,6 +87,7 @@ export interface SubmissionRecord {
   id: string;
   status: ApprovalStatus;
   review_deadline_at: string | null;
+  grading_result: { task_type: string; passed: boolean } | null;
 }
 
 // Full shape of the backend's SubmissionRead (FDE-007) — the instructor
@@ -87,6 +100,7 @@ export interface SubmissionDetail {
   status: ApprovalStatus;
   review_deadline_at: string | null;
   auto_decision: ApprovalStatus | null;
+  grading_result: { task_type: string; passed: boolean } | null;
   decided_at: string | null;
   notified_at: string | null;
   created_at: string;

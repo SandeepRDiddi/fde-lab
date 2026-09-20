@@ -1,5 +1,23 @@
+import io
+import json
 import uuid
 from datetime import datetime, timedelta, timezone
+
+
+class _FakeBody:
+    def __init__(self, data: bytes):
+        self._buf = io.BytesIO(data)
+
+    def read(self):
+        return self._buf.read()
+
+
+class _FakeS3Client:
+    def __init__(self, objects: dict[str, bytes]):
+        self._objects = objects
+
+    def get_object(self, *, Bucket, Key):
+        return {"Body": _FakeBody(self._objects[f"{Bucket}/{Key}"])}
 
 
 def _create_instance(client, config=None):
@@ -48,6 +66,94 @@ def test_create_submission_accepts_content_passing_compliance_checklist(client):
 
     assert response.status_code == 201
     assert response.json()["status"] == "pending_review"
+
+
+def test_create_submission_grades_technical_task_and_rejects_wrong_query(client, monkeypatch):
+    rows = [
+        {"order_id": "ORD-1", "quantity": 1},
+        {"order_id": "ORD-1", "quantity": 1},
+        {"order_id": "ORD-2", "quantity": 3},
+    ]
+    body = "\n".join(json.dumps(row) for row in rows).encode("utf-8")
+    fake_client = _FakeS3Client({"fde-lab-datasets/orders.ndjson": body})
+    monkeypatch.setattr("app.grading.boto3.client", lambda *a, **kw: fake_client)
+
+    instance = _create_instance(
+        client,
+        config={
+            "technical_task": {
+                "task_type": "sql_query",
+                "table_name": "orders",
+                "reference_query": "SELECT DISTINCT order_id, quantity FROM orders",
+            }
+        },
+    )
+    client.patch(
+        f"/scenario-instances/{instance['id']}/dataset",
+        json={"dataset_location": "s3://fde-lab-datasets/orders.ndjson"},
+    )
+
+    response = client.post(
+        f"/scenario-instances/{instance['id']}/submissions", json={"content": "SELECT * FROM orders"}
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["failures"][0]["rule_id"] == "result_mismatch"
+    assert client.get(f"/scenario-instances/{instance['id']}/submissions").json() == []
+
+
+def test_create_submission_grades_technical_task_and_accepts_correct_query(client, monkeypatch):
+    rows = [
+        {"order_id": "ORD-1", "quantity": 1},
+        {"order_id": "ORD-1", "quantity": 1},
+        {"order_id": "ORD-2", "quantity": 3},
+    ]
+    body = "\n".join(json.dumps(row) for row in rows).encode("utf-8")
+    fake_client = _FakeS3Client({"fde-lab-datasets/orders.ndjson": body})
+    monkeypatch.setattr("app.grading.boto3.client", lambda *a, **kw: fake_client)
+
+    instance = _create_instance(
+        client,
+        config={
+            "technical_task": {
+                "task_type": "sql_query",
+                "table_name": "orders",
+                "reference_query": "SELECT DISTINCT order_id, quantity FROM orders",
+            }
+        },
+    )
+    client.patch(
+        f"/scenario-instances/{instance['id']}/dataset",
+        json={"dataset_location": "s3://fde-lab-datasets/orders.ndjson"},
+    )
+
+    response = client.post(
+        f"/scenario-instances/{instance['id']}/submissions",
+        json={"content": "SELECT DISTINCT order_id, quantity FROM orders"},
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["status"] == "pending_review"
+    assert body["grading_result"] == {"task_type": "sql_query", "passed": True}
+
+
+def test_create_submission_technical_task_without_dataset_returns_422(client):
+    instance = _create_instance(
+        client,
+        config={
+            "technical_task": {
+                "task_type": "sql_query",
+                "table_name": "orders",
+                "reference_query": "SELECT 1",
+            }
+        },
+    )
+
+    response = client.post(f"/scenario-instances/{instance['id']}/submissions", json={"content": "SELECT 1"})
+
+    assert response.status_code == 422
+    assert client.get(f"/scenario-instances/{instance['id']}/submissions").json() == []
 
 
 def test_create_submission_moves_to_pending_review(client):

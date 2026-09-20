@@ -70,6 +70,7 @@ class SubmissionRead(BaseModel):
     status: ApprovalStatus
     review_deadline_at: datetime | None
     auto_decision: ApprovalStatus | None
+    grading_result: dict | None
     decided_at: datetime | None
     notified_at: datetime | None
     created_at: datetime

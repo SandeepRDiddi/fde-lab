@@ -2,16 +2,18 @@
 
 import { useState } from "react";
 import { AlertCircle, CheckCircle2, FileCheck2, XCircle } from "lucide-react";
-import type { SubmissionResult } from "../lib/types";
+import type { SubmissionResult, TechnicalTask } from "../lib/types";
 
 export default function SubmissionPanel({
   instanceId,
   studentId,
   canSubmit,
+  technicalTask,
 }: {
   instanceId: string;
   studentId: string;
   canSubmit: boolean;
+  technicalTask?: TechnicalTask;
 }) {
   const [content, setContent] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -43,20 +45,28 @@ export default function SubmissionPanel({
     <section className="card">
       <div className="card-header">
         <FileCheck2 size={17} />
-        <h2>Submit your work</h2>
+        <h2>{technicalTask ? "Submit your query" : "Submit your work"}</h2>
       </div>
       {!canSubmit && <p className="empty-state">This scenario isn&apos;t active — submissions are closed.</p>}
+
+      {technicalTask && (
+        <p className="empty-state" style={{ marginBottom: "0.75rem" }}>
+          {technicalTask.instructions ??
+            `Write a read-only SQL query against the "${technicalTask.table_name}" table. It's graded by running it, not by what it says.`}
+        </p>
+      )}
 
       <textarea
         value={content}
         onChange={(e) => setContent(e.target.value)}
-        placeholder="Paste or write your deliverable…"
+        placeholder={technicalTask ? `SELECT ... FROM ${technicalTask.table_name} ...` : "Paste or write your deliverable…"}
         disabled={!canSubmit || submitting}
         rows={6}
+        style={technicalTask ? { fontFamily: "var(--font-mono)" } : undefined}
       />
       <div style={{ marginTop: "0.75rem" }}>
         <button onClick={handleSubmit} disabled={!canSubmit || submitting || !content.trim()}>
-          {submitting ? "Checking…" : "Submit for compliance review"}
+          {submitting ? "Grading…" : technicalTask ? "Submit query" : "Submit for compliance review"}
         </button>
       </div>
 
@@ -71,7 +81,8 @@ export default function SubmissionPanel({
           {result.passed ? (
             <>
               <div className="submission-result-head">
-                <CheckCircle2 size={16} /> All compliance checks passed.
+                <CheckCircle2 size={16} />
+                {technicalTask ? "Query graded correct." : "All compliance checks passed."}
               </div>
               {result.submission && (
                 <p className="submission-status">
@@ -85,7 +96,7 @@ export default function SubmissionPanel({
           ) : (
             <>
               <div className="submission-result-head">
-                <XCircle size={16} /> Compliance failures
+                <XCircle size={16} /> {technicalTask ? "Grading failed" : "Compliance failures"}
               </div>
               <ul>
                 {result.failures.map((failure) => (

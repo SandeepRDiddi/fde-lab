@@ -127,6 +127,28 @@ previous cohort's dataset) comes from two independent guarantees: the RNG seed i
 freshly drawn per run (never derived from the cohort/instance id), and the storage
 key always includes a new `uuid4`.
 
+### Technical deliverable grading
+The compliance checklist and approval workflow above gate a submission's
+*prose* — required/forbidden phrases, a minimum length. Neither checks
+whether the student actually solved anything, so FDE-013 adds a second,
+independent gate for scenarios that configure `config["technical_task"]`:
+the submission is graded by actually running it, not by scanning its text.
+v1 supports one `task_type`, `sql_query` — implemented directly in
+`backend/app/grading.py` (not a standalone `mocks/` service, same reasoning
+as the approval workflow: it needs the instance's live `dataset_location`
+and runs inline in the same request as the compliance gate, not on a
+schedule). The submitted query is checked for `SELECT`-only/single-statement
+before it runs, executed read-only against an in-memory SQLite table loaded
+from the scenario's own synthetic dataset (FDE-003's `dataset_location`,
+fetched via the same S3-compatible object storage everything else uses),
+and its result set compared to a scenario-configured `reference_query`'s.
+`create_submission` runs this after the compliance gate when
+`technical_task` is configured — both must pass; either failing returns the
+same `{message, failures}` 422 shape the compliance gate already used, so no
+new client-facing contract was needed. A passing submission records what was
+graded (`Submission.grading_result`) alongside the existing approval-workflow
+columns.
+
 ### Data layer
 - **Postgres** — cohorts, students, scenario definitions, submissions, scores
 - **Redis** — task queue and live session state for time-boxing
