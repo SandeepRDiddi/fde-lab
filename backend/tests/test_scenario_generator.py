@@ -365,3 +365,60 @@ def test_call_model_backend_sends_bearer_auth_and_openai_shape(monkeypatch):
     assert reply == "hi"
     assert captured["path"].endswith("/chat/completions")
     assert captured["auth"] == "Bearer test-key"
+
+
+def test_call_model_backend_sends_a_generous_max_tokens(monkeypatch):
+    import httpx
+
+    from app.scenario_generator import _call_model_backend
+
+    captured = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        import json as _json
+
+        captured["body"] = _json.loads(request.content)
+        return httpx.Response(200, json={"choices": [{"message": {"content": "hi"}, "finish_reason": "stop"}]})
+
+    test_client = httpx.Client(transport=httpx.MockTransport(handler))
+    _call_model_backend("a prompt", client=test_client)
+
+    assert captured["body"]["max_tokens"] >= 4096
+
+
+def test_call_model_backend_raises_when_reasoning_model_exhausts_tokens_with_no_output(monkeypatch):
+    # Caught live: a reasoning model (the default, openai/gpt-oss-20b) can
+    # spend its whole completion budget on hidden chain-of-thought and
+    # return finish_reason "length" with zero characters of actual content
+    # for a harder/more ambiguous requirement.
+    import httpx
+
+    from app.scenario_generator import _call_model_backend
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"choices": [{"message": {"content": ""}, "finish_reason": "length"}]})
+
+    test_client = httpx.Client(transport=httpx.MockTransport(handler))
+
+    with pytest.raises(GeneratorError, match="ran out of tokens"):
+        _call_model_backend("a prompt", client=test_client)
+
+
+def test_generate_retries_after_call_model_backend_raises(monkeypatch):
+    # Regression: _call_model_backend's GeneratorError (token exhaustion, a
+    # network error) used to escape generate_scenario_config's retry loop
+    # entirely on the first attempt instead of giving the model a second
+    # try, the same way an unparseable/invalid draft already did.
+    calls = iter([GeneratorError("boom"), json.dumps(VALID_DRAFT)])
+
+    def fake(_prompt, *, client=None):
+        result = next(calls)
+        if isinstance(result, Exception):
+            raise result
+        return result
+
+    monkeypatch.setattr(gen, "_call_model_backend", fake)
+
+    config = generate_scenario_config("anything")
+
+    assert config["technical_task"]["task_type"] == "sql_query"

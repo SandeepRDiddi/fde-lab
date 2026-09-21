@@ -208,6 +208,16 @@ def _call_model_backend(prompt: str, *, client: httpx.Client | None = None) -> s
                 "model": settings.promptops_gateway_model,
                 "messages": [{"role": "user", "content": prompt}],
                 "stream": False,
+                # The default model (openai/gpt-oss-20b) is a reasoning
+                # model -- it spends completion tokens on hidden
+                # chain-of-thought before ever writing the JSON answer.
+                # Without an explicit max_tokens, a harder/more ambiguous
+                # requirement could burn the whole (small) provider default
+                # on reasoning and return empty/truncated content --
+                # caught live: "I want to automate my Payroll using Agentic
+                # AI" hit finish_reason "length" with 0 characters of
+                # actual output. A generous budget leaves room for both.
+                "max_tokens": 8192,
             },
         )
         response.raise_for_status()
@@ -216,7 +226,15 @@ def _call_model_backend(prompt: str, *, client: httpx.Client | None = None) -> s
     finally:
         if owns_client:
             client.close()
-    return response.json()["choices"][0]["message"]["content"]
+    data = response.json()
+    content = data["choices"][0]["message"]["content"]
+    finish_reason = data["choices"][0].get("finish_reason")
+    if finish_reason == "length" and not content.strip():
+        raise GeneratorError(
+            "Model ran out of tokens (finish_reason=length) before writing any output -- "
+            "it likely spent the whole budget on internal reasoning for this requirement"
+        )
+    return content
 
 
 def _build_prompt(requirement: str, *, correction: str | None = None) -> str:
@@ -463,8 +481,8 @@ def generate_scenario_config(requirement: str, *, client: httpx.Client | None = 
     last_error = "no output"
     for attempt in range(2):
         prompt = _build_prompt(requirement, correction=last_error if attempt else None)
-        raw = _call_model_backend(prompt, client=client)
         try:
+            raw = _call_model_backend(prompt, client=client)
             draft = _extract_json(raw)
         except GeneratorError as exc:
             last_error = str(exc)

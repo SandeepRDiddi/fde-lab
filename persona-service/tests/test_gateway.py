@@ -1,6 +1,7 @@
 import httpx
+import pytest
 
-from app.gateway import PromptOpsGatewayClient
+from app.gateway import GatewayError, PromptOpsGatewayClient
 
 
 def _client_with_response(json_body):
@@ -56,3 +57,31 @@ def test_complete_sends_bearer_auth_header_when_api_key_set():
     client.complete(system_prompt="sys", messages=[])
 
     assert captured["auth"] == "Bearer test-key-123"
+
+
+def test_complete_sends_a_generous_max_tokens():
+    captured = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        import json
+
+        captured["body"] = json.loads(request.content)
+        return httpx.Response(200, json={"choices": [{"message": {"content": "ok"}, "finish_reason": "stop"}]})
+
+    client = PromptOpsGatewayClient()
+    client._client = httpx.Client(transport=httpx.MockTransport(handler))
+
+    client.complete(system_prompt="sys", messages=[])
+
+    assert captured["body"]["max_tokens"] >= 2048
+
+
+def test_complete_raises_when_reasoning_model_exhausts_tokens_with_no_output():
+    # Caught live in the scenario generator (same default model,
+    # openai/gpt-oss-20b) -- a reasoning model can spend its whole
+    # completion budget on hidden chain-of-thought and return
+    # finish_reason "length" with zero characters of actual reply content.
+    client = _client_with_response({"choices": [{"message": {"content": ""}, "finish_reason": "length"}]})
+
+    with pytest.raises(GatewayError, match="ran out of tokens"):
+        client.complete(system_prompt="sys", messages=[])

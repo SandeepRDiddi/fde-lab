@@ -49,6 +49,15 @@ class PromptOpsGatewayClient:
                     "model": self.model,
                     "messages": full_messages,
                     "stream": False,
+                    # The default model (openai/gpt-oss-20b) is a reasoning
+                    # model -- it spends completion tokens on hidden
+                    # chain-of-thought before writing the actual reply.
+                    # Without a generous budget a longer conversation or a
+                    # persona system prompt that invites more deliberation
+                    # risks finish_reason "length" with truncated/empty
+                    # content (see backend/app/scenario_generator.py's own
+                    # comment on this same failure mode, caught live there).
+                    "max_tokens": 4096,
                 },
             )
             response.raise_for_status()
@@ -59,7 +68,14 @@ class PromptOpsGatewayClient:
             # model in FDE_PROMPTOPS_GATEWAY_MODEL isn't available there.
             raise GatewayError(f"Model backend request failed: {exc}") from exc
         data = response.json()
-        return data["choices"][0]["message"]["content"]
+        content = data["choices"][0]["message"]["content"]
+        finish_reason = data["choices"][0].get("finish_reason")
+        if finish_reason == "length" and not content.strip():
+            raise GatewayError(
+                "Model ran out of tokens (finish_reason=length) before writing any reply -- "
+                "it likely spent the whole budget on internal reasoning for this turn"
+            )
+        return content
 
 
 @lru_cache

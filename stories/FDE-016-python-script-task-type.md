@@ -280,4 +280,36 @@ null-safe dedup script → 201 `grading_result`), and a real browser
 real result table with the "not graded, this is just a preview" caption
 intact.
 
+### 2026-09-21 (addendum 2) — instructor-user testing caught a real max_tokens bug
+
+The user tested the generator themselves with "I want to automate my
+Payrool using Agentic AI" and hit "Could not generate a usable scenario
+after 2 attempts: Model output was not valid JSON: Expecting ','
+delimiter..." Direct inspection (`_call_model_backend` called by hand
+against the exact prompt) showed the real cause: `finish_reason: "length"`
+with `content` truncated to a handful of characters, and
+`completion_tokens_details.reasoning_tokens` consuming nearly the entire
+2048-token provider default. `openai/gpt-oss-20b` is a reasoning model --
+for a harder/more ambiguous requirement (this one doesn't map cleanly to
+either domain) it can spend the *entire* completion budget on hidden
+chain-of-thought before ever emitting the JSON answer, leaving nothing.
+Neither `scenario_generator.py` nor `persona-service/app/gateway.py` set
+an explicit `max_tokens`, so both were exposed to this on a hard enough
+input.
+
+Fixed both call sites: an explicit generous `max_tokens` (8192 for the
+generator's larger prompt/output, 4096 for persona chat's shorter turns),
+plus a specific `GeneratorError`/`GatewayError` when `finish_reason ==
+"length"` and content is still empty, instead of letting it surface as an
+opaque JSON-parse failure two layers away from the real cause. Also fixed,
+while in this code: `generate_scenario_config`'s retry loop only wrapped
+`_extract_json` in its `except GeneratorError` -- a `GeneratorError` from
+`_call_model_backend` itself (this one, or a plain network failure) used
+to escape the loop on the first attempt instead of getting the same
+second-try treatment an unparseable draft already got. Verified the exact
+originally-failing requirement live afterward: real, sensible JSON
+(mapped "payroll" to `hr_employees`, wrote a properly `.get()`-defensive
+`net_pay`-calculating script) in ~11s. Backend suite: 141 passed (+3).
+persona-service suite: 14 passed (+2).
+
 _(appended by the agent as work happens)_

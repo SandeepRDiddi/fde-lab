@@ -43,6 +43,22 @@ One line per merged story (see `AGENT-WORKFLOW.md`).
   `--create-namespace` that would have broken provisioning any brand-new
   cohort. LTI-launch auto-provisioning still not wired (needs
   `/internal/lti-mappings` on the backend first). (PR #24)
+- 2026-09-21 — Fixed a live-caught bug affecting both model-backend
+  callers (`scenario_generator.py` and `persona-service/app/gateway.py`):
+  neither request set an explicit `max_tokens`, and the default model
+  (`openai/gpt-oss-20b`) is a reasoning model that spends completion
+  tokens on hidden chain-of-thought before writing its actual answer. A
+  harder/more ambiguous requirement ("I want to automate my Payroll using
+  Agentic AI") could burn the whole provider-default token budget on
+  reasoning and return `finish_reason: "length"` with zero characters of
+  real output — surfaced to the instructor as an opaque "Model output was
+  not valid JSON" error. Fixed by requesting a generous `max_tokens`
+  (8192 for the generator, 4096 for persona chat) and raising a clear,
+  specific error when this still happens instead of an unhelpful JSON
+  parse failure. Also fixed a related bug in the generator's own retry
+  loop: a `GeneratorError` from the model-backend call itself (this one,
+  or a network failure) used to skip the retry entirely instead of giving
+  the model a second attempt the way an unparseable draft already did.
 - 2026-09-21 — scenario_generator.py now drafts python_script tasks too
   (previously sql_query only), biased toward scripts by default since
   that's the more realistic FDE deliverable shape. Same fixed-naming fix
