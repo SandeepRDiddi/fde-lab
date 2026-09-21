@@ -1,17 +1,18 @@
 """Turns a raw, messy instructor requirement ("client's CRM sync keeps
 duplicating records") into a full scenario config -- persona, synthetic
-dataset shape, a technical task with an executable reference query, and an
-optional legacy-system quirk -- ready to hand to POST /scenario-instances.
-FDE-014: this is the "requirements in, full FDE Lab scenario out" half of
-the platform; app/grading.py (FDE-013) is the other half, checking the
-student's actual submission against what this module generates.
+dataset shape, a technical task (a SQL query or, since FDE-016, a Python
+script), and an optional legacy-system quirk -- ready to hand to
+POST /scenario-instances. FDE-014: this is the "requirements in, full FDE
+Lab scenario out" half of the platform; app/grading.py (FDE-013/FDE-016)
+is the other half, checking the student's actual submission against what
+this module generates.
 
 Deliberately never emits a compliance_checklist: a submission's whole
-content is the SQL query itself (app/grading.py grades it by running it),
-so a prose-phrasing rule on that same field could never be jointly
-satisfiable with a working query -- an instructor authoring a scenario by
-hand can still combine the two, but the generator doesn't produce that
-combination itself.
+content is the technical task's answer itself (a query or a script --
+app/grading.py grades it by running it), so a prose-phrasing rule on that
+same field could never be jointly satisfiable with a working answer -- an
+instructor authoring a scenario by hand can still combine the two, but the
+generator doesn't produce that combination itself.
 
 Talks to the same OpenAI-compatible model backend persona-service talks to
 (see persona-service/app/gateway.py) -- Groq by default (open-weight models,
@@ -30,6 +31,7 @@ from typing import Any
 
 import httpx
 
+from app.code_runner import CodeRunnerError, run_python_script
 from app.config import settings
 
 # Mirrors data-gen/generator/domains.py's DOMAINS fieldnames -- kept in sync
@@ -66,6 +68,98 @@ KNOWN_DOMAINS: dict[str, list[str]] = {
 # the real model. One canonical name per domain removes that failure class
 # instead of just detecting it.
 TABLE_NAMES: dict[str, str] = {"ecommerce_orders": "orders", "hr_employees": "employees"}
+
+# Same fix, same reason, for python_script tasks: the input/output filenames
+# a script reads/writes are fixed per domain rather than model-chosen, so
+# there's no second place for the model to disagree with itself about what
+# a file is named.
+IO_FILENAMES: dict[str, tuple[str, str]] = {
+    "ecommerce_orders": ("orders.json", "cleaned.json"),
+    "hr_employees": ("employees.json", "cleaned.json"),
+}
+
+# Small, hand-written sample rows per domain -- not data-gen's real output
+# (no dataset exists yet at generation time), just enough shape (a
+# deliberate duplicate by primary key, AND a null in that same duplicate
+# pair) to actually execute a drafted reference_solution and confirm it
+# runs and produces sane output, the same spirit as
+# _reference_query_executes below but for real code instead of a query
+# against an empty table.
+#
+# The null is not incidental: caught live against the real model, a
+# generated reference_solution passed validation against an earlier,
+# all-clean version of these sample rows, then crashed the first time it
+# ran against a real dataset --
+# `TypeError: '<' not supported between instances of 'NoneType' and
+# 'NoneType'` -- because data-gen's actual messiness injects nulls and this
+# validation data didn't, so a script that wasn't null-safe slipped
+# through. Putting a null directly inside the duplicate pair being merged
+# (not just anywhere in the sample) forces exactly the comparison/arithmetic
+# path a dedup-style script exercises on its duplicate rows to be null-safe
+# before it's ever accepted.
+_SAMPLE_ROWS: dict[str, list[dict]] = {
+    "ecommerce_orders": [
+        {
+            "order_id": "ORD-000001",
+            "customer_name": "Jane Doe",
+            "customer_email": "jane@example.com",
+            "order_date": "2026-01-01",
+            "product_sku": "SKU-AAAA-0001",
+            "quantity": 2,
+            "unit_price": 19.99,
+            "order_status": "pending",
+        },
+        {
+            "order_id": "ORD-000001",
+            "customer_name": "Jane Doe",
+            "customer_email": None,
+            "order_date": None,
+            "product_sku": "SKU-AAAA-0001",
+            "quantity": None,
+            "unit_price": 19.99,
+            "order_status": "pending",
+        },
+        {
+            "order_id": "ORD-000002",
+            "customer_name": "John Smith",
+            "customer_email": "john@example.com",
+            "order_date": "2026-01-02",
+            "product_sku": "SKU-BBBB-0002",
+            "quantity": 1,
+            "unit_price": 9.99,
+            "order_status": "shipped",
+        },
+    ],
+    "hr_employees": [
+        {
+            "employee_id": "EMP-000001",
+            "full_name": "Alice Brown",
+            "email": "alice@example.com",
+            "department": "engineering",
+            "hire_date": "2022-01-01",
+            "salary": 95000,
+            "manager_id": "",
+        },
+        {
+            "employee_id": "EMP-000001",
+            "full_name": "Alice Brown",
+            "email": "alice@example.com",
+            "department": "engineering",
+            "hire_date": None,
+            "salary": None,
+            "manager_id": "",
+        },
+        {
+            "employee_id": "EMP-000002",
+            "full_name": "Bob White",
+            "email": "bob@example.com",
+            "department": "sales",
+            "hire_date": "2021-06-01",
+            "salary": 80000,
+            "manager_id": "EMP-000001",
+        },
+    ],
+}
 
 # Mirrors mocks/legacy-api/scenarios/*.json -- the generator can only pick an
 # already-authored legacy scenario (the mock service has no way to invent a
@@ -127,7 +221,9 @@ def _call_model_backend(prompt: str, *, client: httpx.Client | None = None) -> s
 
 def _build_prompt(requirement: str, *, correction: str | None = None) -> str:
     domains_desc = "\n".join(
-        f'- "{name}": table `{TABLE_NAMES[name]}`, columns {cols}' for name, cols in KNOWN_DOMAINS.items()
+        f'- "{name}": table `{TABLE_NAMES[name]}` (for a sql_query task) or file '
+        f'`{IO_FILENAMES[name][0]}` (for a python_script task), columns {cols}'
+        for name, cols in KNOWN_DOMAINS.items()
     )
     legacy_desc = "\n".join(
         f'- "{key}": {info["description"]}' for key, info in KNOWN_LEGACY_SCENARIOS.items()
@@ -143,7 +239,16 @@ explanation before or after it.
 Instructor's requirement:
 \"\"\"{requirement}\"\"\"
 
-Output exactly this JSON shape:
+The technical task is either a single SQL query (task_type "sql_query") or \
+an actual Python script (task_type "python_script"). Prefer python_script \
+by default -- real FDE work is closer to "write something that fixes the \
+data" than "answer one query," and a script can express real logic (loops, \
+conditionals, handling a row that's missing a field) that a single query \
+can't. Only use sql_query when the requirement is genuinely a simple \
+lookup/filter/aggregate question with nothing else to it.
+
+Output exactly this JSON shape -- include ONLY the technical_task fields \
+for the task_type you chose, not both:
 {{
   "persona": {{
     "system_prompt": "<2-4 sentences: who this stakeholder is, their personality, what they do and don't know>",
@@ -154,21 +259,29 @@ Output exactly this JSON shape:
     "messiness": "<low, medium, or high>"
   }},
   "technical_task": {{
-    "instructions": "<what the student must write a SQL query to accomplish, referencing the mess in the data>",
-    "reference_query": "<a single read-only SELECT statement, using ONLY the chosen domain's exact table name and columns below, that ACTUALLY implements what instructions describes -- e.g. if the task is about duplicate/messy rows, the query must use DISTINCT, GROUP BY, or an aggregate to actually resolve that, not just select columns unchanged>"
+    "task_type": "sql_query" or "python_script",
+    "instructions": "<what the student must do, referencing the mess in the data>",
+
+    // ONLY if task_type is "sql_query":
+    "reference_query": "<a single read-only SELECT statement, using ONLY the chosen domain's exact table name and columns below, that ACTUALLY implements what instructions describes -- e.g. if the task is about duplicate/messy rows, the query must use DISTINCT, GROUP BY, or an aggregate to actually resolve that, not just select columns unchanged>",
+
+    // ONLY if task_type is "python_script":
+    "reference_solution": "<a complete Python script (as a single string, \\n for newlines) that reads the domain's exact input filename below as JSON (a list of objects), applies the fix instructions describes, and writes the result -- a JSON list of objects -- to the domain's exact output filename below. Must actually implement the fix (e.g. real deduplication logic if the task is about duplicates), not just copy the input through unchanged. The data is deliberately messy: any field on any row can be null/missing, including on rows you're merging/comparing/aggregating together -- access fields defensively (e.g. dict.get() with a default, or an explicit None-check) rather than assuming a field is always present, or the script will crash on real data. Uses only Python's standard library (e.g. json) -- no third-party imports.>"
   }},
   "legacy_system": "<one of the legacy system ids below, or \\"none\\">"
 }}
 
-Available domains (technical_task.reference_query may only reference these columns):
+Available domains (technical_task may only reference these columns, and must
+read/write from the exact table name or filenames shown -- not the domain
+name itself):
 {domains_desc}
 
 Available legacy systems (pick one only if the requirement plausibly involves integrating with an old/external system; otherwise "none"):
 {legacy_desc}
 
-A student's whole submission is the SQL query itself -- there is no separate
-written explanation, so do not invent any requirement about wording,
-required phrases, or a minimum length; the query is graded purely by
+A student's whole submission is the query or script itself -- there is no
+separate written explanation, so do not invent any requirement about
+wording, required phrases, or a minimum length; it's graded purely by
 running it.
 
 Respond with only the JSON object.{correction_block}"""
@@ -213,34 +326,7 @@ def _reference_query_executes(table_name: str, columns: list[str], reference_que
         conn.close()
 
 
-def _validate(draft: dict) -> tuple[dict | None, str | None]:
-    """Returns (config, None) on success or (None, reason) naming the first
-    problem worth retrying for. Fields that don't affect whether the
-    scenario actually works (messiness, row_count) are defaulted instead of
-    failing the whole draft -- only a broken technical task or an unknown
-    domain is worth a retry. technical_task.table_name is never taken from
-    the model at all (see TABLE_NAMES) -- fixed per domain instead. No
-    compliance_checklist is ever emitted: a submission's whole content is
-    the SQL query, so a prose-phrasing rule on the same field could never
-    be satisfiable alongside it."""
-    if not isinstance(draft, dict):
-        return None, "top-level output must be a JSON object"
-
-    persona = draft.get("persona") or {}
-    system_prompt = str(persona.get("system_prompt") or "").strip()
-    agenda = str(persona.get("agenda") or "").strip()
-    if not system_prompt or not agenda:
-        return None, 'persona.system_prompt and persona.agenda must both be non-empty strings'
-
-    data_gen = draft.get("data_gen") or {}
-    domain = data_gen.get("domain")
-    if domain not in KNOWN_DOMAINS:
-        return None, f'data_gen.domain must be one of {list(KNOWN_DOMAINS)}, got {domain!r}'
-    messiness = data_gen.get("messiness")
-    if messiness not in _VALID_MESSINESS:
-        messiness = "medium"
-
-    technical_task = draft.get("technical_task") or {}
+def _validate_sql_task(technical_task: dict, domain: str) -> tuple[dict | None, str | None]:
     reference_query = str(technical_task.get("reference_query") or "").strip()
     table_name = TABLE_NAMES[domain]
     instructions = str(technical_task.get("instructions") or "").strip()
@@ -264,18 +350,97 @@ def _validate(draft: dict) -> tuple[dict | None, str | None]:
     if not instructions:
         instructions = f'Write a query against "{table_name}" that addresses: {reference_query}'
 
+    return {
+        "task_type": "sql_query",
+        "table_name": table_name,
+        "instructions": instructions,
+        "reference_query": reference_query,
+    }, None
+
+
+def _validate_python_task(technical_task: dict, domain: str) -> tuple[dict | None, str | None]:
+    reference_solution = str(technical_task.get("reference_solution") or "").strip()
+    instructions = str(technical_task.get("instructions") or "").strip()
+    input_filename, output_filename = IO_FILENAMES[domain]
+    if not reference_solution:
+        return None, "technical_task.reference_solution must be a non-empty string"
+
+    sample_rows = _SAMPLE_ROWS[domain]
+    try:
+        expected = run_python_script(
+            reference_solution, sample_rows, input_filename=input_filename, output_filename=output_filename
+        )
+    except CodeRunnerError as exc:
+        return None, (
+            f'technical_task.reference_solution must read "{input_filename}" (a JSON list of objects) and write '
+            f'"{output_filename}" (not the domain name {domain!r} or any other filename); it failed to run: {exc}'
+        )
+    if not isinstance(expected, list) or not all(isinstance(r, dict) for r in expected):
+        return None, f'technical_task.reference_solution must write a JSON array of objects to "{output_filename}"'
+    if _DEDUP_WORDS.search(instructions) and len(expected) >= len(sample_rows):
+        return None, (
+            "technical_task.instructions describes a duplicate/messy-row problem, but running "
+            "reference_solution against sample data (which contains one duplicate row) didn't reduce the "
+            "row count -- it isn't actually deduplicating, just passing rows through unchanged"
+        )
+    if not instructions:
+        instructions = f'Write a script that reads "{input_filename}" and writes "{output_filename}".'
+
+    return {
+        "task_type": "python_script",
+        "input_filename": input_filename,
+        "output_filename": output_filename,
+        "instructions": instructions,
+        "reference_solution": reference_solution,
+    }, None
+
+
+def _validate(draft: dict) -> tuple[dict | None, str | None]:
+    """Returns (config, None) on success or (None, reason) naming the first
+    problem worth retrying for. Fields that don't affect whether the
+    scenario actually works (messiness, row_count) are defaulted instead of
+    failing the whole draft -- only a broken technical task or an unknown
+    domain is worth a retry. technical_task.table_name / input_filename /
+    output_filename are never taken from the model at all (see TABLE_NAMES /
+    IO_FILENAMES) -- fixed per domain instead. No compliance_checklist is
+    ever emitted: a submission's whole content is the query or script
+    itself, so a prose-phrasing rule on the same field could never be
+    satisfiable alongside it."""
+    if not isinstance(draft, dict):
+        return None, "top-level output must be a JSON object"
+
+    persona = draft.get("persona") or {}
+    system_prompt = str(persona.get("system_prompt") or "").strip()
+    agenda = str(persona.get("agenda") or "").strip()
+    if not system_prompt or not agenda:
+        return None, 'persona.system_prompt and persona.agenda must both be non-empty strings'
+
+    data_gen = draft.get("data_gen") or {}
+    domain = data_gen.get("domain")
+    if domain not in KNOWN_DOMAINS:
+        return None, f'data_gen.domain must be one of {list(KNOWN_DOMAINS)}, got {domain!r}'
+    messiness = data_gen.get("messiness")
+    if messiness not in _VALID_MESSINESS:
+        messiness = "medium"
+
+    technical_task = draft.get("technical_task") or {}
+    task_type = technical_task.get("task_type")
+    if task_type == "sql_query":
+        validated_task, error = _validate_sql_task(technical_task, domain)
+    elif task_type == "python_script":
+        validated_task, error = _validate_python_task(technical_task, domain)
+    else:
+        return None, f'technical_task.task_type must be "sql_query" or "python_script", got {task_type!r}'
+    if validated_task is None:
+        return None, error
+
     legacy_system_id = draft.get("legacy_system")
     legacy_system = KNOWN_LEGACY_SCENARIOS.get(legacy_system_id)
 
     config: dict[str, Any] = {
         "persona": {"system_prompt": system_prompt, "agenda": agenda},
         "data_gen": {"domain": domain, "messiness": messiness},
-        "technical_task": {
-            "task_type": "sql_query",
-            "table_name": table_name,
-            "instructions": instructions,
-            "reference_query": reference_query,
-        },
+        "technical_task": validated_task,
     }
     if legacy_system is not None:
         config["legacy_system"] = {

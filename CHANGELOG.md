@@ -43,6 +43,21 @@ One line per merged story (see `AGENT-WORKFLOW.md`).
   `--create-namespace` that would have broken provisioning any brand-new
   cohort. LTI-launch auto-provisioning still not wired (needs
   `/internal/lti-mappings` on the backend first). (PR #24)
+- 2026-09-21 — scenario_generator.py now drafts python_script tasks too
+  (previously sql_query only), biased toward scripts by default since
+  that's the more realistic FDE deliverable shape. Same fixed-naming fix
+  applied to input/output filenames as was applied to SQL's table name.
+  Live testing caught the same null-comparison bug class in generated
+  *code*: a validation-passing reference_solution crashed on a real
+  dataset because the validation sample data had no nulls in it — fixed by
+  putting a null inside the sample duplicate pair a script must merge, so
+  non-null-safe generated code is now rejected before it ships. Honest,
+  documented limitation: even after that fix, the model doesn't always
+  follow the "use this exact filename" instruction inside a script's own
+  source — python_script generation has a real, lower one-shot success
+  rate than sql_query's on this free/small model, not just occasional bad
+  luck; the validation-and-retry catches it (never ships a broken
+  scenario) but doesn't eliminate it.
 - FDE-016: Python script task type — a scenario can now require a script
   (not just a single SQL query), run in a resource-limited,
   environment-stripped sandbox and compared to a reference solution's own

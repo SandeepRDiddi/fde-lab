@@ -203,4 +203,81 @@ Final state: backend suite 131 passed (was 129 before the two live-caught
 fixes; +1 test for the null-comparison regression on each of the SQL and
 python_script paths). `npm run typecheck`/`build`: clean.
 
+### 2026-09-21 (addendum) — scenario_generator.py now drafts python_script too
+
+The "deliberately not in this story's scope" deferral above didn't hold —
+the user asked directly for it next. `backend/app/scenario_generator.py`
+now lets the model choose `task_type` per requirement (`sql_query` or
+`python_script`), with the prompt explicitly biased toward `python_script`
+by default ("real FDE work is closer to 'write something that fixes the
+data' than 'answer one query'"), matching this whole story's premise.
+
+Same fixed-naming lesson as `TABLE_NAMES` applied again:
+`IO_FILENAMES` (per domain, e.g. `ecommerce_orders` → `orders.json` /
+`cleaned.json`) is never taken from the model — the model only supplies
+`reference_solution`'s source; validation forces it to actually read/write
+those exact names by running it and catching a `CodeRunnerError` on a
+FileNotFoundError-style failure. `_SAMPLE_ROWS` (small hand-written rows
+per domain, not a real dataset -- none exists yet at generation time) lets
+`_validate_python_task` actually execute a drafted `reference_solution`
+before accepting it, the same spirit as the SQL path's empty-table
+executability check, plus the same dedup-heuristic check
+(`_DEDUP_WORDS`/row-count-must-shrink) ported to Python's list-of-dicts
+shape.
+
+Live testing (again) caught a live bug the mocked tests couldn't: a
+generated `reference_solution` passed validation against an all-clean
+sample, then crashed on a real dataset with
+`TypeError: '<' not supported between instances of 'NoneType' and
+'NoneType'` — the exact same class of bug as the null-comparison fix
+above, but in generated *code* the sample data never exercised, since
+`_SAMPLE_ROWS` had no nulls in it. Root-fixed by putting a `None` directly
+inside the duplicate pair `_SAMPLE_ROWS` merges (not just anywhere in the
+sample) — any reference_solution comparing/summing the duplicate rows'
+fields must now be null-safe to pass validation at all, since the
+validation data itself forces that comparison to happen against a real
+null. Also strengthened the prompt to say plainly that any field on any
+row can be null, including on rows being merged, and to access fields
+defensively. Added a regression test with a null-unsafe script confirming
+it's now rejected and retried.
+
+Honest finding from this round, not swept under the rug: even after both
+fixes, the model doesn't reliably follow the "use these exact filenames"
+instruction 100% of the time — one live attempt produced a script whose
+own `open()` calls targeted a filename it invented
+(`orders_cleaned.json`) instead of the fixed `cleaned.json`, despite the
+prompt stating the exact required names. Unlike `TABLE_NAMES` for SQL
+(where the config field was simply never taken from the model, closing
+the gap completely), a script's file I/O targets are baked into its own
+source text — there's no equivalent "just don't trust that field" fix,
+only better prompting and validation retry. The validation correctly
+caught this (a clean rejection + retry with the exact missing-file
+error), which is the system working as designed — but it means
+`python_script` generation has a genuinely lower one-shot success rate
+than `sql_query` on this free/small model than the SQL path does, not
+just occasional bad luck. Documented plainly rather than claimed fixed;
+worth revisiting with a stronger/larger model if this becomes a real
+friction point, not further prompt-tweaking against a small model's
+ceiling.
+
+Tests: 7 new tests in `test_scenario_generator.py` covering the
+python_script generation path (valid draft accepted, missing/unknown
+task_type retried, non-executing script retried, wrong-filename script
+retried, dedup-instructions-without-dedup retried, non-list-output
+retried, null-unsafe script retried) plus the `VALID_DRAFT` fixture
+updated to explicitly declare `task_type` (now a required model output,
+not implied). Full backend suite: 138 passed. `npm run typecheck`/`build`:
+unaffected (backend-only change).
+
+Verified live end-to-end after the null-safety fix, using a
+generator-shaped config (task_type/instructions/reference_solution in the
+same shape the generator itself produces): real `data-gen` dataset at
+`messiness: "high"` (real nulls throughout), `technical_task` answer key
+confirmed redacted from both the create and GET responses, curl-verified
+grading (wrong/passthrough script → 422 `result_mismatch`; correct
+null-safe dedup script → 201 `grading_result`), and a real browser
+(Playwright) Run step against the actual 560-row messy dataset showing a
+real result table with the "not graded, this is just a preview" caption
+intact.
+
 _(appended by the agent as work happens)_

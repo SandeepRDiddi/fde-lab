@@ -188,11 +188,26 @@ Firecracker) in front of it first. `grading.py` gained
 by `task_type` alongside the `sql_query` path, with the same
 compare-as-unordered-rows semantics and the same run-before-submit
 response shape so the frontend needed no new rendering path, only a
-CodeMirror language switch. `scenario_generator.py` (FDE-014) does not
-draft `python_script` tasks yet — validating that a *generated* script
-actually works is a different problem than validating a generated SQL
-query, and was left as explicitly deferred rather than folded into this
-change.
+CodeMirror language switch. `scenario_generator.py` (FDE-014) now drafts
+`python_script` tasks too, biased toward preferring them over `sql_query`
+by default (a script is closer to "build something that fixes the data"
+than "answer one query"). Same `TABLE_NAMES` lesson applied again as
+`IO_FILENAMES` — a script's input/output filenames are fixed per domain,
+never model-chosen — plus new small hand-written `_SAMPLE_ROWS` per domain
+(no real dataset exists at generation time) so a drafted
+`reference_solution` can actually be executed and validated before it's
+returned, the same spirit as the SQL path's empty-table executability
+check. That sample data deliberately includes a `None` inside the
+duplicate pair it asks a script to merge — added after a generated,
+validation-passing script crashed the first time it ran against a real
+(messy) dataset, since the original all-clean sample never exercised a
+null in that comparison. Even with that fix, a script's own file I/O
+targets are baked into its source text in a way a config field isn't —
+unlike `table_name`, there's no "just don't trust that field" fix for a
+script that opens the wrong filename internally, only prompting +
+validation-and-retry — so `python_script` generation has a genuinely
+lower one-shot success rate on a small/free model than `sql_query` does;
+documented as a real, known limitation rather than claimed solved.
 
 Building FDE-016 also surfaced (via design review) that every
 scenario-instance read endpoint was returning `technical_task.reference_query`
