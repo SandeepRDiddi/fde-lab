@@ -17,8 +17,8 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Anvtrac FDE Lab",
-  description: "Anvtrac FDE Lab — simulated forward-deployed engineering engagements for training cohorts",
+  title: "FDE Lab",
+  description: "FDE Lab — simulated forward-deployed engineering engagements for training cohorts",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

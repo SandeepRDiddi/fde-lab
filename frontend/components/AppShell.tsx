@@ -15,14 +15,15 @@ export default function AppShell({
             <svg className="app-nav-mark" viewBox="0 0 32 32" aria-hidden="true">
               <rect width="32" height="32" rx="7" fill="#16283F" />
               <path
-                d="M16 7L24.5 25H20.9L19.1 21H12.9L11.1 25H7.5L16 7ZM16 13.4L14.1 17.6H17.9L16 13.4Z"
-                fill="#DE6A22"
+                d="M11 8L20 16L11 24"
+                stroke="#DE6A22"
+                strokeWidth="3.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill="none"
               />
             </svg>
-            <span className="app-nav-wordmark">
-              <strong>Anvtrac</strong>
-              <span>FDE Lab</span>
-            </span>
+            <span className="app-nav-wordmark">FDE Lab</span>
           </Link>
           {role && <span className="app-nav-role">{role} view</span>}
         </div>

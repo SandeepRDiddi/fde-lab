@@ -10,11 +10,15 @@ export default function HomePage() {
           <svg className="app-nav-mark" viewBox="0 0 32 32" aria-hidden="true">
             <rect width="32" height="32" rx="7" fill="#16283F" />
             <path
-              d="M16 7L24.5 25H20.9L19.1 21H12.9L11.1 25H7.5L16 7ZM16 13.4L14.1 17.6H17.9L16 13.4Z"
-              fill="#DE6A22"
+              d="M11 8L20 16L11 24"
+              stroke="#DE6A22"
+              strokeWidth="3.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              fill="none"
             />
           </svg>
-          <h1>Anvtrac FDE Lab</h1>
+          <h1>FDE Lab</h1>
           <p>
             A simulated forward-deployed engineering engagement — ambiguous asks, messy data, and a
             skeptical stakeholder, run on your cohort&apos;s clock.

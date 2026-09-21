@@ -1,5 +1,5 @@
 /* =========================================================================
-   Anvtrac FDE Lab — design tokens
+   FDE Lab — design tokens
    Palette: deep steel (brand/structure) + ember (signature/urgency accent).
    Type: IBM Plex Sans (UI), IBM Plex Mono (data, timestamps, countdown).
    ========================================================================= */
@@ -148,24 +148,10 @@ code,
 }
 
 .app-nav-wordmark {
-  display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
   white-space: nowrap;
-}
-
-.app-nav-wordmark strong {
   font-weight: 600;
   font-size: 1.02rem;
   letter-spacing: 0.01em;
-}
-
-.app-nav-wordmark span {
-  font-size: 0.82rem;
-  color: #b7c4d6;
-  font-weight: 400;
-  padding-left: 0.5rem;
-  border-left: 1px solid rgba(255, 255, 255, 0.18);
 }
 
 .app-nav-role {
