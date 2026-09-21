@@ -27,16 +27,33 @@ export interface LegacySystemConfig {
   description?: string;
 }
 
-// FDE-013: a scenario can require a real, auto-graded deliverable (currently
-// a read-only SQL query run against the scenario's own synthetic dataset)
-// instead of grading submission text by keyword alone.
-export interface TechnicalTask {
+// FDE-013: a scenario can require a real, auto-graded deliverable instead
+// of grading submission text by keyword alone -- a read-only SQL query
+// (v1), or FDE-016's python_script (a data-cleaning script, run in a
+// sandbox and compared to a reference solution's own output). The answer
+// key (reference_query / reference_solution) is never sent to a student's
+// browser -- the backend redacts it from every scenario-instance response
+// (see backend/app/routers/scenario_instances.py); it only appears in the
+// generator's own draft-preview response, an instructor-only step before
+// an instance is even created, which is why both fields are optional here.
+export interface SqlQueryTask {
   task_type: "sql_query";
   table_name: string;
   instructions?: string;
-  reference_query: string;
   compare?: "unordered_rows" | "ordered_rows";
+  reference_query?: string;
 }
+
+export interface PythonScriptTask {
+  task_type: "python_script";
+  input_filename: string;
+  output_filename: string;
+  instructions?: string;
+  compare?: "unordered_rows" | "exact";
+  reference_solution?: string;
+}
+
+export type TechnicalTask = SqlQueryTask | PythonScriptTask;
 
 // FDE-014: full scenario config the generator drafts from a raw requirement
 // -- the same shape POST /scenario-instances' config accepts. Never carries

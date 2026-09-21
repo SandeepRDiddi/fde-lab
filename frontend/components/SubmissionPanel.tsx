@@ -1,12 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import CodeMirror from "@uiw/react-codemirror";
 import { sql } from "@codemirror/lang-sql";
+import { python } from "@codemirror/lang-python";
 import { AlertCircle, CheckCircle2, FileCheck2, Play, XCircle } from "lucide-react";
 import type { QueryRunResult, SubmissionResult, TechnicalTask } from "../lib/types";
 
-const sqlExtensions = [sql()];
+function defaultInstructions(task: TechnicalTask): string {
+  if (task.task_type === "python_script") {
+    return `Write a Python script that reads "${task.input_filename}" and writes "${task.output_filename}". It's graded by running it, not by what it says.`;
+  }
+  return `Write a read-only SQL query against the "${task.table_name}" table. It's graded by running it, not by what it says.`;
+}
+
+function placeholderFor(task: TechnicalTask): string {
+  if (task.task_type === "python_script") {
+    return `# read ${task.input_filename}, write ${task.output_filename}\nimport json\n`;
+  }
+  return `SELECT ... FROM ${task.table_name} ...`;
+}
 
 export default function SubmissionPanel({
   instanceId,
@@ -27,6 +40,11 @@ export default function SubmissionPanel({
   const [running, setRunning] = useState(false);
   const [runResult, setRunResult] = useState<QueryRunResult | null>(null);
   const [runError, setRunError] = useState<string | null>(null);
+
+  const editorExtensions = useMemo(
+    () => [technicalTask?.task_type === "python_script" ? python() : sql()],
+    [technicalTask?.task_type]
+  );
 
   async function handleRun() {
     if (!content.trim() || running) return;
@@ -73,14 +91,13 @@ export default function SubmissionPanel({
     <section className="card">
       <div className="card-header">
         <FileCheck2 size={17} />
-        <h2>{technicalTask ? "Write your query" : "Submit your work"}</h2>
+        <h2>{technicalTask ? (technicalTask.task_type === "python_script" ? "Write your script" : "Write your query") : "Submit your work"}</h2>
       </div>
       {!canSubmit && <p className="empty-state">This scenario isn&apos;t active — submissions are closed.</p>}
 
       {technicalTask && (
         <p className="empty-state" style={{ marginBottom: "0.75rem" }}>
-          {technicalTask.instructions ??
-            `Write a read-only SQL query against the "${technicalTask.table_name}" table. It's graded by running it, not by what it says.`}
+          {technicalTask.instructions ?? defaultInstructions(technicalTask)}
         </p>
       )}
 
@@ -89,10 +106,10 @@ export default function SubmissionPanel({
           <CodeMirror
             value={content}
             onChange={setContent}
-            extensions={sqlExtensions}
+            extensions={editorExtensions}
             editable={canSubmit && !submitting && !running}
-            placeholder={`SELECT ... FROM ${technicalTask.table_name} ...`}
-            height="160px"
+            placeholder={placeholderFor(technicalTask)}
+            height="200px"
             basicSetup={{ lineNumbers: true, foldGutter: false }}
           />
         </div>
@@ -117,7 +134,7 @@ export default function SubmissionPanel({
           </button>
         )}
         <button onClick={handleSubmit} disabled={!canSubmit || submitting || running || !content.trim()}>
-          {submitting ? "Grading…" : technicalTask ? "Submit query" : "Submit for compliance review"}
+          {submitting ? "Grading…" : technicalTask ? "Submit" : "Submit for compliance review"}
         </button>
       </div>
 
@@ -177,7 +194,7 @@ export default function SubmissionPanel({
             <>
               <div className="submission-result-head">
                 <CheckCircle2 size={16} />
-                {technicalTask ? "Query graded correct." : "All compliance checks passed."}
+                {technicalTask ? "Graded correct." : "All compliance checks passed."}
               </div>
               {result.submission && (
                 <p className="submission-status">

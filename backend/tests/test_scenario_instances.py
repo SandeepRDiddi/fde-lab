@@ -96,3 +96,104 @@ def test_list_scenario_instances_empty_cohort_returns_empty_list(client):
     response = client.get("/scenario-instances", params={"cohort_id": str(uuid.uuid4())})
     assert response.status_code == 200
     assert response.json() == []
+
+
+def _technical_task_config(**extra):
+    return {
+        "technical_task": {
+            "task_type": "sql_query",
+            "table_name": "orders",
+            "instructions": "dedupe the orders",
+            "reference_query": "SELECT DISTINCT * FROM orders",
+            **extra,
+        }
+    }
+
+
+def test_create_scenario_instance_redacts_reference_query_from_response(client):
+    payload = {
+        "cohort_id": str(uuid.uuid4()),
+        "student_id": str(uuid.uuid4()),
+        "config": _technical_task_config(),
+    }
+
+    response = client.post("/scenario-instances", json=payload)
+
+    body = response.json()
+    assert "reference_query" not in body["config"]["technical_task"]
+    assert body["config"]["technical_task"]["instructions"] == "dedupe the orders"
+
+
+def test_get_scenario_instance_redacts_reference_query_from_response(client):
+    created = client.post(
+        "/scenario-instances",
+        json={"cohort_id": str(uuid.uuid4()), "student_id": str(uuid.uuid4()), "config": _technical_task_config()},
+    ).json()
+
+    response = client.get(f"/scenario-instances/{created['id']}")
+
+    assert "reference_query" not in response.json()["config"]["technical_task"]
+
+
+def test_get_scenario_instance_redacts_reference_solution_from_response(client):
+    config = {
+        "technical_task": {
+            "task_type": "python_script",
+            "instructions": "clean the data",
+            "input_filename": "orders.json",
+            "output_filename": "cleaned.json",
+            "reference_solution": "import json\nprint('the answer')",
+        }
+    }
+    created = client.post(
+        "/scenario-instances",
+        json={"cohort_id": str(uuid.uuid4()), "student_id": str(uuid.uuid4()), "config": config},
+    ).json()
+
+    response = client.get(f"/scenario-instances/{created['id']}")
+
+    assert "reference_solution" not in response.json()["config"]["technical_task"]
+    assert response.json()["config"]["technical_task"]["output_filename"] == "cleaned.json"
+
+
+def test_list_scenario_instances_redacts_reference_query_from_response(client):
+    cohort_id = str(uuid.uuid4())
+    client.post(
+        "/scenario-instances",
+        json={"cohort_id": cohort_id, "student_id": str(uuid.uuid4()), "config": _technical_task_config()},
+    )
+
+    response = client.get("/scenario-instances", params={"cohort_id": cohort_id})
+
+    assert "reference_query" not in response.json()[0]["config"]["technical_task"]
+
+
+def test_schedule_scenario_instance_redacts_reference_query_from_response(client):
+    from datetime import datetime, timedelta, timezone
+
+    created = client.post(
+        "/scenario-instances",
+        json={"cohort_id": str(uuid.uuid4()), "student_id": str(uuid.uuid4()), "config": _technical_task_config()},
+    ).json()
+    now = datetime.now(timezone.utc)
+
+    response = client.post(
+        f"/scenario-instances/{created['id']}/schedule",
+        json={"start_at": (now + timedelta(seconds=1)).isoformat(), "end_at": (now + timedelta(hours=1)).isoformat()},
+    )
+
+    assert "reference_query" not in response.json()["config"]["technical_task"]
+
+
+def test_set_scenario_instance_dataset_redacts_reference_query_from_response(client):
+    created = client.post(
+        "/scenario-instances",
+        json={"cohort_id": str(uuid.uuid4()), "student_id": str(uuid.uuid4()), "config": _technical_task_config()},
+    ).json()
+
+    response = client.patch(
+        f"/scenario-instances/{created['id']}/dataset",
+        json={"dataset_location": "s3://fde-lab-datasets/x.jsonl"},
+    )
+
+    assert "reference_query" not in response.json()["config"]["technical_task"]

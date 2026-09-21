@@ -21,17 +21,41 @@ from app.tasks import (
 
 router = APIRouter(prefix="/scenario-instances", tags=["scenario-instances"])
 
+# Fields inside config["technical_task"] that are the grader's answer key --
+# never safe to return over this router's endpoints. Nothing legitimate
+# consumes them via the API: grading (app/grading.py) and the run-preview
+# endpoint (app/routers/technical_task.py) read them straight off the ORM
+# object server-side, and the only place an answer key should ever be
+# visible in a response is the generator's own draft-preview
+# (POST /scenario-generator/draft, an instructor-authoring step before an
+# instance even exists) -- not any endpoint a student's browser calls.
+_ANSWER_KEY_FIELDS = ("reference_query", "reference_solution")
+
+
+def _redact_technical_task(config: dict) -> dict:
+    technical_task = config.get("technical_task")
+    if not isinstance(technical_task, dict):
+        return config
+    redacted = {k: v for k, v in technical_task.items() if k not in _ANSWER_KEY_FIELDS}
+    return {**config, "technical_task": redacted}
+
+
+def _to_read_model(instance: ScenarioInstance) -> ScenarioInstanceRead:
+    read = ScenarioInstanceRead.model_validate(instance)
+    return read.model_copy(update={"config": _redact_technical_task(read.config)})
+
 
 @router.get("", response_model=list[ScenarioInstanceRead])
-def list_scenario_instances(cohort_id: uuid.UUID, db: Session = Depends(get_db)) -> list[ScenarioInstance]:
+def list_scenario_instances(cohort_id: uuid.UUID, db: Session = Depends(get_db)) -> list[ScenarioInstanceRead]:
     """FDE-009 AC2: an instructor console lists every student's instance for
     a cohort to show live status, one row per student."""
-    return (
+    instances = (
         db.query(ScenarioInstance)
         .filter(ScenarioInstance.cohort_id == cohort_id)
         .order_by(ScenarioInstance.created_at)
         .all()
     )
+    return [_to_read_model(instance) for instance in instances]
 
 
 @router.post("", response_model=ScenarioInstanceRead, status_code=201)
@@ -46,7 +70,7 @@ def create_scenario_instance(
     db.add(instance)
     db.commit()
     db.refresh(instance)
-    return instance
+    return _to_read_model(instance)
 
 
 @router.get("/{instance_id}", response_model=ScenarioInstanceRead)
@@ -54,7 +78,7 @@ def get_scenario_instance(instance_id: uuid.UUID, db: Session = Depends(get_db))
     instance = db.get(ScenarioInstance, instance_id)
     if instance is None:
         raise HTTPException(status_code=404, detail="Scenario instance not found")
-    return instance
+    return _to_read_model(instance)
 
 
 @router.patch("/{instance_id}/dataset", response_model=ScenarioInstanceRead)
@@ -69,7 +93,7 @@ def set_scenario_instance_dataset(
     instance.dataset_location = payload.dataset_location
     db.commit()
     db.refresh(instance)
-    return instance
+    return _to_read_model(instance)
 
 
 @router.get("/{instance_id}/dataset-preview")
@@ -133,4 +157,4 @@ def schedule_scenario_instance(
     # returns above, so re-sync this session's copy before returning it.
     db.refresh(instance)
 
-    return instance
+    return _to_read_model(instance)

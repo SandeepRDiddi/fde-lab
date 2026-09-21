@@ -3,7 +3,14 @@ import json
 
 import pytest
 
-from app.grading import GradingError, evaluate_sql_submission, evaluate_technical_submission, run_query
+from app.grading import (
+    GradingError,
+    evaluate_python_script_submission,
+    evaluate_sql_submission,
+    evaluate_technical_submission,
+    run_python_script_preview,
+    run_query,
+)
 
 
 class FakeBody:
@@ -92,6 +99,27 @@ def test_disallowed_keyword_rejected(fake_bucket):
     assert failures[0]["rule_id"] == "query_disallowed_keyword"
 
 
+def test_correct_query_passes_with_mixed_null_and_string_column_values(monkeypatch):
+    # Regression: a column holding None in one row and a string in another
+    # (real datasets have nulls) used to raise TypeError from plain
+    # sorted() when comparing result sets, since Python can't order None
+    # against str -- caught live against a real messy dataset.
+    rows = [
+        {"order_id": "ORD-1", "customer_email": None, "quantity": 1},
+        {"order_id": "ORD-2", "customer_email": "b@example.com", "quantity": 3},
+        {"order_id": "ORD-3", "customer_email": None, "quantity": 2},
+    ]
+    body = "\n".join(json.dumps(row) for row in rows).encode("utf-8")
+    client = FakeS3Client({"fde-lab-datasets/instances/abc/orders.ndjson": body})
+    monkeypatch.setattr("app.dataset_store.boto3.client", lambda *a, **kw: client)
+
+    task = {"task_type": "sql_query", "table_name": "orders", "reference_query": "SELECT * FROM orders"}
+    passed, failures = evaluate_sql_submission("SELECT * FROM orders", DATASET_LOCATION, task)
+
+    assert passed is True
+    assert failures == []
+
+
 def test_invalid_sql_returns_execution_error(fake_bucket):
     passed, failures = evaluate_sql_submission("SELECT * FRUM orders", DATASET_LOCATION, TASK)
     assert passed is False
@@ -159,3 +187,122 @@ def test_run_query_surfaces_execution_error(fake_bucket):
 def test_run_query_without_dataset_raises(fake_bucket):
     with pytest.raises(GradingError):
         run_query("SELECT 1", None, TASK)
+
+
+DEDUP_REFERENCE_SOLUTION = """
+import json
+
+with open("orders.json") as f:
+    rows = json.load(f)
+
+seen = {}
+for row in rows:
+    seen[row["order_id"]] = row
+
+with open("cleaned.json", "w") as f:
+    json.dump(list(seen.values()), f)
+"""
+
+PYTHON_TASK = {
+    "task_type": "python_script",
+    "input_filename": "orders.json",
+    "output_filename": "cleaned.json",
+    "reference_solution": DEDUP_REFERENCE_SOLUTION,
+}
+
+
+def test_evaluate_python_script_submission_passes_correct_script(fake_bucket):
+    passed, failures = evaluate_python_script_submission(DEDUP_REFERENCE_SOLUTION, DATASET_LOCATION, PYTHON_TASK)
+    assert passed is True
+    assert failures == []
+
+
+def test_evaluate_python_script_submission_fails_wrong_script(fake_bucket):
+    passthrough = """
+import json
+with open("orders.json") as f:
+    rows = json.load(f)
+with open("cleaned.json", "w") as f:
+    json.dump(rows, f)
+"""
+    passed, failures = evaluate_python_script_submission(passthrough, DATASET_LOCATION, PYTHON_TASK)
+    assert passed is False
+    assert failures[0]["rule_id"] == "result_mismatch"
+
+
+def test_evaluate_python_script_submission_surfaces_script_error(fake_bucket):
+    broken = "raise RuntimeError('nope')"
+    passed, failures = evaluate_python_script_submission(broken, DATASET_LOCATION, PYTHON_TASK)
+    assert passed is False
+    assert failures[0]["rule_id"] == "script_execution_error"
+
+
+def test_evaluate_python_script_submission_rejects_non_list_output(fake_bucket):
+    wrong_shape = """
+import json
+with open("cleaned.json", "w") as f:
+    json.dump({"not": "a list"}, f)
+"""
+    passed, failures = evaluate_python_script_submission(wrong_shape, DATASET_LOCATION, PYTHON_TASK)
+    assert passed is False
+    assert failures[0]["rule_id"] == "invalid_output_shape"
+
+
+def test_evaluate_python_script_submission_missing_reference_raises(fake_bucket):
+    with pytest.raises(GradingError):
+        evaluate_python_script_submission("x", DATASET_LOCATION, {"task_type": "python_script"})
+
+
+def test_evaluate_python_script_submission_without_dataset_raises(fake_bucket):
+    with pytest.raises(GradingError):
+        evaluate_python_script_submission(DEDUP_REFERENCE_SOLUTION, None, PYTHON_TASK)
+
+
+def test_evaluate_technical_submission_dispatches_python_script(fake_bucket):
+    passed, failures = evaluate_technical_submission(DEDUP_REFERENCE_SOLUTION, DATASET_LOCATION, PYTHON_TASK)
+    assert passed is True
+    assert failures == []
+
+
+def test_run_python_script_preview_returns_actual_result_ungraded(fake_bucket):
+    passthrough = """
+import json
+with open("orders.json") as f:
+    rows = json.load(f)
+with open("cleaned.json", "w") as f:
+    json.dump(rows, f)
+"""
+    result = run_python_script_preview(passthrough, DATASET_LOCATION, PYTHON_TASK)
+    assert result["row_count"] == 3
+    assert set(result["columns"]) == {"order_id", "customer_email", "quantity"}
+
+
+def test_run_python_script_preview_without_dataset_raises(fake_bucket):
+    with pytest.raises(GradingError):
+        run_python_script_preview("x", None, PYTHON_TASK)
+
+
+def test_python_script_submission_passes_with_mixed_null_and_string_output_values(monkeypatch):
+    # Same regression as the SQL test above, for the python_script path's
+    # own row comparison (_normalize_rows).
+    rows = [
+        {"order_id": "ORD-1", "customer_email": None},
+        {"order_id": "ORD-2", "customer_email": "b@example.com"},
+        {"order_id": "ORD-3", "customer_email": None},
+    ]
+    body = "\n".join(json.dumps(row) for row in rows).encode("utf-8")
+    client = FakeS3Client({"fde-lab-datasets/instances/abc/orders.ndjson": body})
+    monkeypatch.setattr("app.dataset_store.boto3.client", lambda *a, **kw: client)
+
+    passthrough = """
+import json
+with open("orders.json") as f:
+    rows = json.load(f)
+with open("cleaned.json", "w") as f:
+    json.dump(rows, f)
+"""
+    task = {"task_type": "python_script", "input_filename": "orders.json", "output_filename": "cleaned.json", "reference_solution": passthrough}
+    passed, failures = evaluate_python_script_submission(passthrough, DATASET_LOCATION, task)
+
+    assert passed is True
+    assert failures == []

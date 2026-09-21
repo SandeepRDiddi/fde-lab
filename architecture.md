@@ -171,6 +171,41 @@ distinct from submitting, so the first query a student runs isn't
 necessarily the only one that's graded. The frontend's query input is a
 real SQL editor (CodeMirror) rather than a plain textarea.
 
+FDE-016 adds a second `task_type`, `python_script` — a script instead of a
+single query, closer to real FDE deliverable work (loops, conditionals,
+error handling for bad rows, not one statement). This needed a genuinely
+new capability the SQL path never did: running arbitrary student *code*.
+`backend/app/code_runner.py` is that sandbox — resource-limited (CPU,
+memory, open files via `preexec_fn`) and environment-stripped (a script
+can't read this service's own secrets out of `os.environ`), but **not**
+network-isolated: it shares this container's network namespace, so it
+could still reach internal services the way any other process here can.
+That's a stated, accepted trade-off for a training lab (trusted students,
+not adversarial input) — not appropriate to point at untrusted/public
+input without real process isolation (a container-per-run, gVisor,
+Firecracker) in front of it first. `grading.py` gained
+`evaluate_python_script_submission`/`run_python_script_preview`, dispatched
+by `task_type` alongside the `sql_query` path, with the same
+compare-as-unordered-rows semantics and the same run-before-submit
+response shape so the frontend needed no new rendering path, only a
+CodeMirror language switch. `scenario_generator.py` (FDE-014) does not
+draft `python_script` tasks yet — validating that a *generated* script
+actually works is a different problem than validating a generated SQL
+query, and was left as explicitly deferred rather than folded into this
+change.
+
+Building FDE-016 also surfaced (via design review) that every
+scenario-instance read endpoint was returning `technical_task.reference_query`
+verbatim — the answer key, visible to any student who opened devtools.
+Fixed in the same change (affects the already-shipped `sql_query` path,
+not just the new one): `scenario_instances.py`'s router now redacts
+`reference_query`/`reference_solution` out of `config.technical_task` on
+every response. Grading and the run-preview endpoint still read the
+answer key directly off the ORM object, never through this redacted read
+model; the only place it's still visible over the API is the generator's
+own draft-preview response, an instructor-authoring step before an
+instance exists.
+
 ### Scenario generator
 FDE-013 made a submission gradable by execution instead of only by keyword;
 FDE-014 does the same for the scenario itself — instead of an instructor

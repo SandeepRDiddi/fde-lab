@@ -116,7 +116,9 @@ export default function ScenarioGenerator({
             <strong style={{ color: "var(--ink-900)" }}>Technical task:</strong> {draft.technical_task.instructions}
           </p>
           <pre className="submission-content" style={{ fontFamily: "var(--font-mono)" }}>
-            {draft.technical_task.reference_query}
+            {draft.technical_task.task_type === "python_script"
+              ? draft.technical_task.reference_solution
+              : draft.technical_task.reference_query}
           </pre>
 
           <div className="chat-input" style={{ marginTop: "0.85rem" }}>

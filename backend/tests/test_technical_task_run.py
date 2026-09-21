@@ -97,3 +97,54 @@ def test_run_query_instance_not_found_404s(client):
         f"/scenario-instances/{uuid.uuid4()}/technical-task/run", json={"content": "SELECT 1"}
     )
     assert response.status_code == 404
+
+
+def test_run_python_script_returns_actual_result_not_a_grade(client, monkeypatch):
+    instance = _create_instance(
+        client,
+        config={
+            "technical_task": {
+                "task_type": "python_script",
+                "input_filename": "orders.json",
+                "output_filename": "cleaned.json",
+                "reference_solution": "import json\nwith open('orders.json') as f: rows = json.load(f)\nwith open('cleaned.json', 'w') as f: json.dump(rows, f)",
+            }
+        },
+    )
+    _seed_dataset(client, monkeypatch, instance["id"], [{"order_id": "ORD-1"}, {"order_id": "ORD-2"}])
+
+    script = (
+        "import json\n"
+        "with open('orders.json') as f:\n    rows = json.load(f)\n"
+        "with open('cleaned.json', 'w') as f:\n    json.dump(rows, f)\n"
+    )
+    response = client.post(
+        f"/scenario-instances/{instance['id']}/technical-task/run", json={"content": script}
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["row_count"] == 2
+    assert client.get(f"/scenario-instances/{instance['id']}/submissions").json() == []
+
+
+def test_run_python_script_with_syntax_error_returns_422(client, monkeypatch):
+    instance = _create_instance(
+        client,
+        config={
+            "technical_task": {
+                "task_type": "python_script",
+                "input_filename": "orders.json",
+                "output_filename": "cleaned.json",
+                "reference_solution": "import json\nwith open('cleaned.json', 'w') as f: json.dump([], f)",
+            }
+        },
+    )
+    _seed_dataset(client, monkeypatch, instance["id"], [{"order_id": "ORD-1"}])
+
+    response = client.post(
+        f"/scenario-instances/{instance['id']}/technical-task/run",
+        json={"content": "this is not python("},
+    )
+
+    assert response.status_code == 422

@@ -23,6 +23,7 @@ file's own `Status` field; keep this table in sync when a story moves.
 | FDE-013 | Technical deliverable grading | P1 | FDE-001, FDE-003, FDE-006, FDE-007 | Done |
 | FDE-014 | Scenario generator | P1 | FDE-001, FDE-003, FDE-004, FDE-005, FDE-006, FDE-013 | Done |
 | FDE-015 | Technical task workspace (dataset preview, run-before-submit, real editor) | P1 | FDE-003, FDE-008, FDE-013 | Done |
+| FDE-016 | Python script task type (sandboxed code execution) | P1 | FDE-003, FDE-013, FDE-015 | Done |
 
 ## Pick-up order
 

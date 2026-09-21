@@ -138,6 +138,58 @@ def test_create_submission_grades_technical_task_and_accepts_correct_query(clien
     assert body["grading_result"] == {"task_type": "sql_query", "passed": True}
 
 
+def test_create_submission_grades_python_script_task_end_to_end(client, monkeypatch):
+    rows = [
+        {"order_id": "ORD-1", "quantity": 1},
+        {"order_id": "ORD-1", "quantity": 1},
+        {"order_id": "ORD-2", "quantity": 3},
+    ]
+    body = "\n".join(json.dumps(row) for row in rows).encode("utf-8")
+    fake_client = _FakeS3Client({"fde-lab-datasets/orders.ndjson": body})
+    monkeypatch.setattr("app.dataset_store.boto3.client", lambda *a, **kw: fake_client)
+
+    dedup_script = (
+        "import json\n"
+        "with open('orders.json') as f:\n    rows = json.load(f)\n"
+        "seen = {}\n"
+        "for row in rows:\n    seen[row['order_id']] = row\n"
+        "with open('cleaned.json', 'w') as f:\n    json.dump(list(seen.values()), f)\n"
+    )
+    passthrough_script = (
+        "import json\n"
+        "with open('orders.json') as f:\n    rows = json.load(f)\n"
+        "with open('cleaned.json', 'w') as f:\n    json.dump(rows, f)\n"
+    )
+
+    instance = _create_instance(
+        client,
+        config={
+            "technical_task": {
+                "task_type": "python_script",
+                "input_filename": "orders.json",
+                "output_filename": "cleaned.json",
+                "reference_solution": dedup_script,
+            }
+        },
+    )
+    client.patch(
+        f"/scenario-instances/{instance['id']}/dataset",
+        json={"dataset_location": "s3://fde-lab-datasets/orders.ndjson"},
+    )
+
+    wrong = client.post(
+        f"/scenario-instances/{instance['id']}/submissions", json={"content": passthrough_script}
+    )
+    assert wrong.status_code == 422
+    assert wrong.json()["detail"]["failures"][0]["rule_id"] == "result_mismatch"
+
+    correct = client.post(
+        f"/scenario-instances/{instance['id']}/submissions", json={"content": dedup_script}
+    )
+    assert correct.status_code == 201
+    assert correct.json()["grading_result"] == {"task_type": "python_script", "passed": True}
+
+
 def test_create_submission_technical_task_without_dataset_returns_422(client):
     instance = _create_instance(
         client,

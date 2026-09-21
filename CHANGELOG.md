@@ -43,6 +43,21 @@ One line per merged story (see `AGENT-WORKFLOW.md`).
   `--create-namespace` that would have broken provisioning any brand-new
   cohort. LTI-launch auto-provisioning still not wired (needs
   `/internal/lti-mappings` on the backend first). (PR #24)
+- FDE-016: Python script task type — a scenario can now require a script
+  (not just a single SQL query), run in a resource-limited,
+  environment-stripped sandbox and compared to a reference solution's own
+  output. Closes the "answering a SQL question isn't FDE work" gap: a
+  script has real control flow, closer to an actual deliverable. Also
+  fixed, in the same change: every scenario-instance API response was
+  leaking the grading answer key (`reference_query`/`reference_solution`)
+  straight to the student's browser — now redacted on every read endpoint;
+  affected the already-shipped SQL task type too, not just the new one.
+  Live testing against a real dataset also caught a row-comparison bug in
+  both the new and existing grading paths: a column holding `null` in one
+  row and a string in another (real datasets have nulls) crashed the
+  result-set comparison, since Python can't order `None` against `str` —
+  fixed in both `evaluate_sql_submission` and the new
+  `evaluate_python_script_submission`.
 - FDE-015: Technical task workspace — a student can now see the actual
   dataset (columns + real rows, not a raw unopenable `s3://...` link)
   before writing a query, run a query and see its real result before

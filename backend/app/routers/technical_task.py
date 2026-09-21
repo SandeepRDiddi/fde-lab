@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.grading import GradingError, run_query
+from app.grading import GradingError, run_python_script_preview, run_query
 from app.models import ScenarioInstance
 from app.schemas import TechnicalTaskRunRequest
 
@@ -29,7 +29,12 @@ def run_technical_task_query(
     if not technical_task:
         raise HTTPException(status_code=404, detail="This scenario has no technical task configured")
 
+    task_type = technical_task.get("task_type")
     try:
-        return run_query(payload.content, instance.dataset_location, technical_task)
+        if task_type == "sql_query":
+            return run_query(payload.content, instance.dataset_location, technical_task)
+        if task_type == "python_script":
+            return run_python_script_preview(payload.content, instance.dataset_location, technical_task)
+        raise GradingError(f"Unsupported technical_task.task_type: {task_type!r}")
     except GradingError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
