@@ -64,6 +64,12 @@ class ScenarioDraftRequest(BaseModel):
     requirement: str
 
 
+class TechnicalTaskRunRequest(BaseModel):
+    """FDE-015: a non-graded 'try it' run of a technical-task query."""
+
+    content: str
+
+
 class SubmissionCreate(BaseModel):
     content: str
 

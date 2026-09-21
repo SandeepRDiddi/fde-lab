@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.dataset_store import DatasetStoreError, preview_dataset
 from app.models import ScenarioInstance
 from app.schemas import (
     ScenarioInstanceCreate,
@@ -69,6 +70,22 @@ def set_scenario_instance_dataset(
     db.commit()
     db.refresh(instance)
     return instance
+
+
+@router.get("/{instance_id}/dataset-preview")
+def get_dataset_preview(instance_id: uuid.UUID, limit: int = 20, db: Session = Depends(get_db)) -> dict:
+    """FDE-015: lets a student browse the actual dataset before writing a
+    query against it -- real FDE work starts with looking at the data, not
+    guessing at column names blind."""
+    instance = db.get(ScenarioInstance, instance_id)
+    if instance is None:
+        raise HTTPException(status_code=404, detail="Scenario instance not found")
+    if not instance.dataset_location:
+        raise HTTPException(status_code=404, detail="This scenario has no dataset yet")
+    try:
+        return preview_dataset(instance.dataset_location, limit=limit)
+    except DatasetStoreError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 @router.post("/{instance_id}/schedule", response_model=ScenarioInstanceRead)

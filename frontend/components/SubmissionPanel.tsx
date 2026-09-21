@@ -1,8 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { AlertCircle, CheckCircle2, FileCheck2, XCircle } from "lucide-react";
-import type { SubmissionResult, TechnicalTask } from "../lib/types";
+import CodeMirror from "@uiw/react-codemirror";
+import { sql } from "@codemirror/lang-sql";
+import { AlertCircle, CheckCircle2, FileCheck2, Play, XCircle } from "lucide-react";
+import type { QueryRunResult, SubmissionResult, TechnicalTask } from "../lib/types";
+
+const sqlExtensions = [sql()];
 
 export default function SubmissionPanel({
   instanceId,
@@ -19,6 +23,30 @@ export default function SubmissionPanel({
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<SubmissionResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const [running, setRunning] = useState(false);
+  const [runResult, setRunResult] = useState<QueryRunResult | null>(null);
+  const [runError, setRunError] = useState<string | null>(null);
+
+  async function handleRun() {
+    if (!content.trim() || running) return;
+    setRunning(true);
+    setRunError(null);
+    setRunResult(null);
+    try {
+      const res = await fetch(`/api/scenario-instances/${instanceId}/technical-task/run`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ content }),
+      });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail ?? "Run failed");
+      setRunResult((await res.json()) as QueryRunResult);
+    } catch (err) {
+      setRunError((err as Error).message);
+    } finally {
+      setRunning(false);
+    }
+  }
 
   async function handleSubmit() {
     if (!content.trim() || submitting) return;
@@ -45,7 +73,7 @@ export default function SubmissionPanel({
     <section className="card">
       <div className="card-header">
         <FileCheck2 size={17} />
-        <h2>{technicalTask ? "Submit your query" : "Submit your work"}</h2>
+        <h2>{technicalTask ? "Write your query" : "Submit your work"}</h2>
       </div>
       {!canSubmit && <p className="empty-state">This scenario isn&apos;t active — submissions are closed.</p>}
 
@@ -56,19 +84,86 @@ export default function SubmissionPanel({
         </p>
       )}
 
-      <textarea
-        value={content}
-        onChange={(e) => setContent(e.target.value)}
-        placeholder={technicalTask ? `SELECT ... FROM ${technicalTask.table_name} ...` : "Paste or write your deliverable…"}
-        disabled={!canSubmit || submitting}
-        rows={6}
-        style={technicalTask ? { fontFamily: "var(--font-mono)" } : undefined}
-      />
-      <div style={{ marginTop: "0.75rem" }}>
-        <button onClick={handleSubmit} disabled={!canSubmit || submitting || !content.trim()}>
+      {technicalTask ? (
+        <div className="code-editor">
+          <CodeMirror
+            value={content}
+            onChange={setContent}
+            extensions={sqlExtensions}
+            editable={canSubmit && !submitting && !running}
+            placeholder={`SELECT ... FROM ${technicalTask.table_name} ...`}
+            height="160px"
+            basicSetup={{ lineNumbers: true, foldGutter: false }}
+          />
+        </div>
+      ) : (
+        <textarea
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          placeholder="Paste or write your deliverable…"
+          disabled={!canSubmit || submitting}
+          rows={6}
+        />
+      )}
+
+      <div style={{ marginTop: "0.75rem", display: "flex", gap: "0.6rem" }}>
+        {technicalTask && (
+          <button
+            className="btn-secondary"
+            onClick={handleRun}
+            disabled={!canSubmit || running || submitting || !content.trim()}
+          >
+            <Play size={14} /> {running ? "Running…" : "Run"}
+          </button>
+        )}
+        <button onClick={handleSubmit} disabled={!canSubmit || submitting || running || !content.trim()}>
           {submitting ? "Grading…" : technicalTask ? "Submit query" : "Submit for compliance review"}
         </button>
       </div>
+
+      {runError && (
+        <p className="error-text">
+          <AlertCircle size={14} /> {runError}
+        </p>
+      )}
+
+      {runResult && (
+        <div className="run-result-table">
+          <p className="run-result-caption">
+            {runResult.row_count} row{runResult.row_count === 1 ? "" : "s"} returned
+            {runResult.truncated && ` (showing first ${runResult.rows.length})`} — not graded, this is just a
+            preview.
+          </p>
+          <div className="table-scroll">
+            <table className="roster-table">
+              <thead>
+                <tr>
+                  {runResult.columns.map((col) => (
+                    <th key={col}>{col}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {runResult.rows.map((row, i) => (
+                  <tr key={i}>
+                    {row.map((value, j) => (
+                      <td key={j} style={{ fontFamily: "var(--font-mono)", fontSize: "0.8rem" }}>
+                        {value === null ? (
+                          <span className="empty-state" style={{ display: "inline" }}>
+                            null
+                          </span>
+                        ) : (
+                          String(value)
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {error && (
         <p className="error-text">

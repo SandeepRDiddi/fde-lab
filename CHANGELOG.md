@@ -43,6 +43,13 @@ One line per merged story (see `AGENT-WORKFLOW.md`).
   `--create-namespace` that would have broken provisioning any brand-new
   cohort. LTI-launch auto-provisioning still not wired (needs
   `/internal/lti-mappings` on the backend first). (PR #24)
+- FDE-015: Technical task workspace — a student can now see the actual
+  dataset (columns + real rows, not a raw unopenable `s3://...` link)
+  before writing a query, run a query and see its real result before
+  deciding what to submit (non-graded, doesn't touch the actual graded
+  submission), and writes it in a real syntax-highlighted SQL editor
+  instead of a plain textarea. Closes the "submit blind, first try is the
+  only try" gap in FDE-013's technical-task flow.
 - 2026-09-20 — Moved the model backend (persona chat and the scenario
   generator) from local Ollama to Groq's free tier: local CPU inference was
   slow and competed with the host machine for resources. Both

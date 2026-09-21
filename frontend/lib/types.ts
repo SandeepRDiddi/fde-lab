@@ -126,6 +126,23 @@ export interface ScenarioSchedule {
   pivot_config?: Record<string, unknown> | null;
 }
 
+// FDE-015: lets a student browse the actual dataset before writing a query
+// against it, instead of guessing at column names blind.
+export interface DatasetPreview {
+  columns: string[];
+  rows: Record<string, unknown>[];
+  total_rows: number;
+}
+
+// FDE-015: a non-graded "try it" run of a technical-task query -- the
+// actual result set, not a pass/fail.
+export interface QueryRunResult {
+  columns: string[];
+  rows: unknown[][];
+  row_count: number;
+  truncated: boolean;
+}
+
 export interface SubmissionResult {
   passed: boolean;
   failures: RuleFailure[];

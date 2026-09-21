@@ -157,6 +157,20 @@ new client-facing contract was needed. A passing submission records what was
 graded (`Submission.grading_result`) alongside the existing approval-workflow
 columns.
 
+FDE-015 extends the workspace around this instead of the grading logic
+itself: `app/dataset_store.py` (the S3-fetch code `grading.py` already had,
+extracted so both share it) adds `preview_dataset()` — the dataset's actual
+columns and first N rows, behind
+`GET /scenario-instances/{id}/dataset-preview` — since a student writing a
+query blind, with no way to see what the data even looks like, isn't a
+realistic version of the task. `grading.py` also gained `run_query()`, the
+same execution path as `evaluate_sql_submission` but returning the query's
+real result instead of a pass/fail and never persisting anything, behind
+`POST /scenario-instances/{id}/technical-task/run` — a "try it" step
+distinct from submitting, so the first query a student runs isn't
+necessarily the only one that's graded. The frontend's query input is a
+real SQL editor (CodeMirror) rather than a plain textarea.
+
 ### Scenario generator
 FDE-013 made a submission gradable by execution instead of only by keyword;
 FDE-014 does the same for the scenario itself — instead of an instructor

@@ -3,7 +3,7 @@ import json
 
 import pytest
 
-from app.grading import GradingError, evaluate_sql_submission, evaluate_technical_submission
+from app.grading import GradingError, evaluate_sql_submission, evaluate_technical_submission, run_query
 
 
 class FakeBody:
@@ -40,7 +40,7 @@ TASK = {
 def fake_bucket(monkeypatch):
     body = "\n".join(json.dumps(row) for row in ROWS).encode("utf-8")
     client = FakeS3Client({"fde-lab-datasets/instances/abc/orders.ndjson": body})
-    monkeypatch.setattr("app.grading.boto3.client", lambda *a, **kw: client)
+    monkeypatch.setattr("app.dataset_store.boto3.client", lambda *a, **kw: client)
     return client
 
 
@@ -119,3 +119,43 @@ def test_evaluate_technical_submission_dispatches_by_task_type(fake_bucket):
 def test_evaluate_technical_submission_unknown_task_type_raises(fake_bucket):
     with pytest.raises(GradingError):
         evaluate_technical_submission("anything", DATASET_LOCATION, {"task_type": "python_script"})
+
+
+def test_run_query_returns_actual_result_ungraded(fake_bucket):
+    result = run_query("SELECT * FROM orders", DATASET_LOCATION, TASK)
+    assert result["columns"] == ["order_id", "customer_email", "quantity"]
+    assert result["row_count"] == 3
+    assert result["truncated"] is False
+    assert len(result["rows"]) == 3
+
+
+def test_run_query_truncates_beyond_preview_limit(fake_bucket, monkeypatch):
+    import app.grading as grading_module
+
+    monkeypatch.setattr(grading_module, "_RUN_PREVIEW_LIMIT", 2)
+
+    result = run_query("SELECT * FROM orders", DATASET_LOCATION, TASK)
+
+    assert result["row_count"] == 3
+    assert len(result["rows"]) == 2
+    assert result["truncated"] is True
+
+
+def test_run_query_rejects_non_select(fake_bucket):
+    with pytest.raises(GradingError):
+        run_query("DELETE FROM orders", DATASET_LOCATION, TASK)
+
+
+def test_run_query_rejects_disallowed_keyword(fake_bucket):
+    with pytest.raises(GradingError):
+        run_query("SELECT * FROM orders WHERE customer_email = 'drop the mic'", DATASET_LOCATION, TASK)
+
+
+def test_run_query_surfaces_execution_error(fake_bucket):
+    with pytest.raises(GradingError):
+        run_query("SELECT * FRUM orders", DATASET_LOCATION, TASK)
+
+
+def test_run_query_without_dataset_raises(fake_bucket):
+    with pytest.raises(GradingError):
+        run_query("SELECT 1", None, TASK)

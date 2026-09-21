@@ -490,6 +490,37 @@ input:focus {
   border-color: var(--steel-500);
 }
 
+/* CodeMirror SQL editor (FDE-015) -- wrapped to match textarea/input's own
+ * border/radius instead of CodeMirror's default chrome. */
+.code-editor {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.code-editor:focus-within {
+  border-color: var(--steel-500);
+}
+
+.code-editor .cm-editor {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+}
+
+.code-editor .cm-editor.cm-focused {
+  outline: none;
+}
+
+.run-result-table {
+  margin-top: 0.75rem;
+}
+
+.run-result-caption {
+  color: var(--ink-600);
+  font-size: 0.8rem;
+  margin-bottom: 0.4rem;
+}
+
 button {
   cursor: pointer;
   border: 1px solid transparent;

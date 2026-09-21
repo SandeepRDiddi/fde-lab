@@ -2,7 +2,7 @@
 
 import AppShell from "../../../components/AppShell";
 import ArtifactFeed from "../../../components/ArtifactFeed";
-import DatasetLink from "../../../components/DatasetLink";
+import DatasetPreview from "../../../components/DatasetPreview";
 import LegacySystemPanel from "../../../components/LegacySystemPanel";
 import PersonaChat from "../../../components/PersonaChat";
 import ScenarioStatusHeader from "../../../components/ScenarioStatusHeader";
@@ -34,7 +34,7 @@ export default function WorkspaceClient({
             <div className="workspace-sidebar">
               <ArtifactFeed artifacts={instance.config.artifacts ?? []} />
               <LegacySystemPanel instanceId={instance.id} legacySystem={instance.config.legacy_system} />
-              <DatasetLink location={instance.dataset_location} />
+              <DatasetPreview instanceId={instance.id} hasDataset={Boolean(instance.dataset_location)} />
             </div>
           </div>
         )}

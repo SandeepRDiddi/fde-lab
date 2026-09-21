@@ -3,18 +3,17 @@ the submitted text for keywords (that's app/compliance.py, a separate gate).
 FDE-013's v1 task type is a read-only SQL query, checked against the
 scenario's own synthetic dataset (data-gen's output in object storage) by
 comparing its result set to a reference query's -- correctness is measured,
-not phrasing.
+not phrasing. FDE-015's run_query (below) executes the same way but doesn't
+grade anything -- a non-graded "try it" step so a student can see what their
+query actually returns before submitting it for real.
 """
 from __future__ import annotations
 
-import json
 import re
 import sqlite3
 from typing import Any
 
-import boto3
-
-from app.config import settings
+from app.dataset_store import DatasetStoreError, fetch_dataset_rows
 
 # Read-only enforcement: student queries are graded, not executed against
 # anything that persists -- a query that could mutate state or reach outside
@@ -24,6 +23,12 @@ _DISALLOWED_KEYWORDS = re.compile(
     re.IGNORECASE,
 )
 
+# A dataset's row count is small (data-gen defaults to a few hundred rows
+# per instance) so fetching everything and slicing is simpler than a
+# streaming/paginated fetch -- this just caps what a "try it" run hands
+# back to the browser.
+_RUN_PREVIEW_LIMIT = 50
+
 
 class GradingError(Exception):
     """A setup failure (bad task config, unreachable/malformed dataset,
@@ -32,26 +37,10 @@ class GradingError(Exception):
 
 
 def _fetch_dataset_rows(dataset_location: str) -> list[dict]:
-    if not dataset_location.startswith("s3://"):
-        raise GradingError(f"Unsupported dataset location: {dataset_location!r}")
-    _, _, rest = dataset_location.partition("s3://")
-    bucket, _, key = rest.partition("/")
-
-    client = boto3.client(
-        "s3",
-        endpoint_url=settings.s3_endpoint_url,
-        aws_access_key_id=settings.s3_access_key,
-        aws_secret_access_key=settings.s3_secret_key,
-    )
     try:
-        body = client.get_object(Bucket=bucket, Key=key)["Body"].read().decode("utf-8")
-    except Exception as exc:  # noqa: BLE001 -- boto3 raises its own botocore exception types
-        raise GradingError(f"Could not fetch dataset {dataset_location!r}: {exc}") from exc
-
-    try:
-        return [json.loads(line) for line in body.splitlines() if line.strip()]
-    except json.JSONDecodeError as exc:
-        raise GradingError(f"Dataset {dataset_location!r} is not valid NDJSON: {exc}") from exc
+        return fetch_dataset_rows(dataset_location)
+    except DatasetStoreError as exc:
+        raise GradingError(str(exc)) from exc
 
 
 def _load_sqlite(table_name: str, rows: list[dict]) -> sqlite3.Connection:
@@ -157,3 +146,38 @@ def evaluate_technical_submission(
     if task_type == "sql_query":
         return evaluate_sql_submission(content, dataset_location, task)
     raise GradingError(f"Unsupported technical_task.task_type: {task_type!r}")
+
+
+def run_query(student_sql: str, dataset_location: str | None, task: dict[str, Any]) -> dict[str, Any]:
+    """FDE-015: runs a query and returns its actual result, ungraded --
+    lets a student iterate (explore the data, adjust, re-run) before
+    deciding what to submit for real. Same read-only enforcement as
+    grading, since this still executes against the real dataset; the only
+    difference from evaluate_sql_submission is that nothing is compared or
+    persisted here."""
+    if not dataset_location:
+        raise GradingError("Scenario instance has no dataset yet — nothing to run against")
+
+    table_name = task.get("table_name") or "dataset"
+    if not _is_single_select(student_sql):
+        raise GradingError("Only a single read-only SELECT statement can be run")
+    if _DISALLOWED_KEYWORDS.search(student_sql):
+        raise GradingError("Only a read-only SELECT query can be run — remove any write/schema keyword")
+
+    rows = _fetch_dataset_rows(dataset_location)
+    conn = _load_sqlite(table_name, rows)
+    try:
+        cursor = conn.execute(student_sql)
+        columns = [d[0] for d in cursor.description] if cursor.description else []
+        result = cursor.fetchall()
+    except sqlite3.Error as exc:
+        raise GradingError(f"Query failed to execute: {exc}") from exc
+    finally:
+        conn.close()
+
+    return {
+        "columns": columns,
+        "rows": [list(r) for r in result[:_RUN_PREVIEW_LIMIT]],
+        "row_count": len(result),
+        "truncated": len(result) > _RUN_PREVIEW_LIMIT,
+    }

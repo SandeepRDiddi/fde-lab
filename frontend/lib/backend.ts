@@ -1,8 +1,10 @@
 import type {
   ApprovalStatus,
   ConversationRead,
+  DatasetPreview,
   GeneratedScenarioConfig,
   Message,
+  QueryRunResult,
   ScenarioInstance,
   ScenarioSchedule,
   SubmissionDetail,
@@ -121,6 +123,26 @@ export async function createScenarioInstance(
     body: JSON.stringify({ cohort_id: cohortId, student_id: studentId, config }),
   });
   return asJson<ScenarioInstance>(res);
+}
+
+/** FDE-015: the actual dataset (columns + first N rows), so a student can
+ * see what they're working with before writing a query. */
+export async function getDatasetPreview(instanceId: string, limit = 20): Promise<DatasetPreview> {
+  const res = await fetch(`${BACKEND_URL}/scenario-instances/${instanceId}/dataset-preview?limit=${limit}`, {
+    cache: "no-store",
+  });
+  return asJson<DatasetPreview>(res);
+}
+
+/** FDE-015: runs a technical-task query and returns its actual result,
+ * ungraded -- lets a student iterate before submitting for real. */
+export async function runTechnicalTaskQuery(instanceId: string, content: string): Promise<QueryRunResult> {
+  const res = await fetch(`${BACKEND_URL}/scenario-instances/${instanceId}/technical-task/run`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ content }),
+  });
+  return asJson<QueryRunResult>(res);
 }
 
 /** Instructor console (FDE-009): every scenario instance for a cohort, one per student. */

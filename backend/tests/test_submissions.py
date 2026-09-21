@@ -76,7 +76,7 @@ def test_create_submission_grades_technical_task_and_rejects_wrong_query(client,
     ]
     body = "\n".join(json.dumps(row) for row in rows).encode("utf-8")
     fake_client = _FakeS3Client({"fde-lab-datasets/orders.ndjson": body})
-    monkeypatch.setattr("app.grading.boto3.client", lambda *a, **kw: fake_client)
+    monkeypatch.setattr("app.dataset_store.boto3.client", lambda *a, **kw: fake_client)
 
     instance = _create_instance(
         client,
@@ -110,7 +110,7 @@ def test_create_submission_grades_technical_task_and_accepts_correct_query(clien
     ]
     body = "\n".join(json.dumps(row) for row in rows).encode("utf-8")
     fake_client = _FakeS3Client({"fde-lab-datasets/orders.ndjson": body})
-    monkeypatch.setattr("app.grading.boto3.client", lambda *a, **kw: fake_client)
+    monkeypatch.setattr("app.dataset_store.boto3.client", lambda *a, **kw: fake_client)
 
     instance = _create_instance(
         client,
