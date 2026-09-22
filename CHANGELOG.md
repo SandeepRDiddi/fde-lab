@@ -211,3 +211,6 @@ One line per merged story (see `AGENT-WORKFLOW.md`).
 - FDE-031: GlobalRetail engagement, Stage 12 (Observability) — trace/
   prompt/tool-call/latency instrumentation motivated by an unexplainable
   live wrong-answer incident.
+- FDE-032: GlobalRetail engagement, Stage 13 (Failure Engineering) —
+  retry/fallback/circuit-breaker/dead-letter playbook proven against the
+  same SAP-standin dependency Stage 2 already live-touched.
