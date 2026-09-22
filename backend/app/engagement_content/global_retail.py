@@ -1001,6 +1001,85 @@ _STAGE_12 = {
     "compliance_checklist": _STAGE_12_COMPLIANCE_CHECKLIST,
 }
 
+
+# --- Stage 13: Failure Engineering (Mission 4: Industrialize) --------------
+#
+# The FDE-005 mock has no configurable timeout/failure-injection scenario
+# (see FDE-020/FDE-028's equivalent scope calls), so the induced-timeout
+# demo is persona-narrated. Marcus Chen (reused from Stages 0/5) plays the
+# demo audience, demanding the design account for the specific SAP-standin
+# dependency (acme-crm, already live-touched in Stage 2) rather than a
+# hypothetical system.
+
+_STAGE_13_PERSONA = {
+    "system_prompt": (
+        "You are Marcus Chen, GlobalRetail Corp's VP of Engineering. "
+        "You've asked for a live resilience review, not a slide.\n\n"
+        "Reveal the following ONLY when specifically asked:\n"
+        "- If asked what's being demonstrated, or about the SAP-standin "
+        "system: it's being induced to time out for this review "
+        "specifically -- the same order/inventory/supplier system the FDE "
+        "already hit a real access gap against back in the current-state "
+        "work. You want the failure handling proven against that actual "
+        "dependency, not a hypothetical one.\n\n"
+        "If asked generally what you want to see, tell them to walk "
+        "through what happens at each layer -- retry, fallback, circuit "
+        "breaker, dead-letter -- when that specific call times out, "
+        "including how the system rolls back and degrades gracefully "
+        "rather than just describing the patterns in the abstract."
+    ),
+    "agenda": (
+        "Push the FDE to prove resilience against the specific SAP-standin "
+        "dependency they've already worked with, covering retry, "
+        "fallback, circuit breaker, dead-letter handling, and rollback/"
+        "graceful degradation -- not a generic description."
+    ),
+}
+
+_STAGE_13_COMPLIANCE_CHECKLIST = [
+    {
+        "id": "retry-pattern",
+        "description": "Names retry handling",
+        "check": "must_include",
+        "value": "retry",
+    },
+    {
+        "id": "fallback-pattern",
+        "description": "Names fallback handling",
+        "check": "must_include",
+        "value": "fallback",
+    },
+    {
+        "id": "circuit-breaker-pattern",
+        "description": "Names circuit breaker handling",
+        "check": "must_include",
+        "value": "circuit breaker",
+    },
+    {
+        "id": "dead-letter-pattern",
+        "description": "Names dead-letter handling",
+        "check": "must_include",
+        "value": "dead-letter",
+    },
+    {
+        "id": "rollback-degradation",
+        "description": "Explicitly addresses rollback and graceful degradation",
+        "check": "must_include",
+        "value": "graceful degradation",
+    },
+    {
+        "id": "min-length",
+        "description": "Failure Playbook is substantive, not a one-liner",
+        "check": "min_length",
+        "value": 300,
+    },
+]
+
+_STAGE_13 = {
+    "persona": _STAGE_13_PERSONA,
+    "compliance_checklist": _STAGE_13_COMPLIANCE_CHECKLIST,
+}
+
 GLOBAL_RETAIL_STAGES: list[dict] = [
     _STAGE_0,
     _STAGE_1,
@@ -1015,4 +1094,5 @@ GLOBAL_RETAIL_STAGES: list[dict] = [
     _STAGE_10,
     _STAGE_11,
     _STAGE_12,
+    _STAGE_13,
 ]
