@@ -704,6 +704,81 @@ _STAGE_8 = {
     "compliance_checklist": _STAGE_8_COMPLIANCE_CHECKLIST,
 }
 
+
+# --- Stage 9: Build the AI Capability (Mission 3: Engineer) ----------------
+#
+# Both injected failure modes are persona-narrated: this repo has no
+# vector-search/RAG service, and FDE-005's mock has no "intermittent 500"
+# scenario built (only 200-cycling or a 401 when auth is configured and
+# missing). Extending either is a platform-level change out of scope for a
+# content story (same call FDE-020 already made). Deliverable is a
+# design/build writeup, not runnable code nothing here can execute or grade.
+
+_STAGE_9_PERSONA = {
+    "system_prompt": (
+        "You are Taylor Brooks, GlobalRetail Corp's Platform Architect, "
+        "continuing into the build phase. The FDE is building the actual "
+        "RAG and tool-calling core now.\n\n"
+        "Reveal each of the following ONLY when specifically asked:\n"
+        "- If asked about the supplier-lookup API's reliability: it "
+        "occasionally returns a bare HTTP 500 with no explanation in the "
+        "body at all -- no error code, no message, nothing to act on "
+        "except the status itself. It's intermittent, no obvious pattern.\n"
+        "- If asked about search/retrieval quality, or about ambiguous "
+        "queries specifically: on an ambiguous supplier-substitution "
+        "question, the vector search returns a fluent, confident answer "
+        "that is simply wrong -- it doesn't hedge, doesn't say it's "
+        "unsure, just answers convincingly. That's arguably worse than "
+        "returning nothing.\n\n"
+        "If asked generally how the build is going, tell them to actually "
+        "try both failure paths themselves rather than assuming the happy "
+        "path works."
+    ),
+    "agenda": (
+        "Make sure the FDE's design accounts for both the flaky "
+        "supplier API and the confident-wrong-answer retrieval failure, "
+        "not just the case where everything responds cleanly."
+    ),
+}
+
+_STAGE_9_COMPLIANCE_CHECKLIST = [
+    {
+        "id": "flaky-api-resilience",
+        "description": "Addresses resilience for the flaky supplier API (retry)",
+        "check": "must_include",
+        "value": "retry",
+    },
+    {
+        "id": "flaky-api-evidence",
+        "description": "Evidence the student engaged with the specific 500 failure",
+        "check": "must_include",
+        "value": "500",
+    },
+    {
+        "id": "ambiguous-query-named",
+        "description": "Names the ambiguous-query retrieval failure explicitly",
+        "check": "must_include",
+        "value": "ambiguous",
+    },
+    {
+        "id": "ambiguous-query-mitigation",
+        "description": "Proposes a mitigation for the ambiguous-query failure (e.g. a clarifying question)",
+        "check": "must_include",
+        "value": "clarifying question",
+    },
+    {
+        "id": "min-length",
+        "description": "Working AI Service writeup is substantive, not a one-liner",
+        "check": "min_length",
+        "value": 300,
+    },
+]
+
+_STAGE_9 = {
+    "persona": _STAGE_9_PERSONA,
+    "compliance_checklist": _STAGE_9_COMPLIANCE_CHECKLIST,
+}
+
 GLOBAL_RETAIL_STAGES: list[dict] = [
     _STAGE_0,
     _STAGE_1,
@@ -714,4 +789,5 @@ GLOBAL_RETAIL_STAGES: list[dict] = [
     _STAGE_6,
     _STAGE_7,
     _STAGE_8,
+    _STAGE_9,
 ]
