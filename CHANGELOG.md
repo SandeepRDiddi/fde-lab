@@ -245,3 +245,6 @@ One line per merged story (see `AGENT-WORKFLOW.md`).
   sidebar + reused workspace components) and an instructor one-click
   GlobalRetail launcher, closing the gap the FDE-017–040 arc left (backend
   and content only, no frontend). Verified live in a real browser.
+- Set up `frontend/`'s ESLint config (never committed before) — pinned
+  `eslint`/`eslint-config-next` to match Next.js 14, not the auto-resolved
+  Next 16 config. `npm run lint` now runs clean, non-interactively.
