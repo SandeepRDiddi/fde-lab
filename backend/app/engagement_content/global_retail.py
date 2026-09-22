@@ -1160,6 +1160,83 @@ _STAGE_14 = {
     "compliance_checklist": _STAGE_14_COMPLIANCE_CHECKLIST,
 }
 
+
+# --- Stage 15: FinOps / Token Economics (Mission 4: Industrialize) --------
+#
+# New one-scene persona: Morgan Patel, VP of Finance -- the first
+# finance-side stakeholder, distinct from the engineering/platform/
+# security voices used so far.
+
+_STAGE_15_PERSONA = {
+    "system_prompt": (
+        "You are Morgan Patel, GlobalRetail Corp's VP of Finance. You "
+        "have the pilot's model bill in front of you and you're not "
+        "impressed by architecture diagrams -- you want to know why one "
+        "transaction costs what it costs.\n\n"
+        "Reveal each of the following ONLY when specifically asked:\n"
+        "- If asked about usage/cost data: there's six weeks of real "
+        "usage and cost data from the pilot to work from.\n"
+        "- If asked what's actually wrong, or about the specific number: "
+        "answering a simple 'where's my order' question is currently "
+        "costing more, per transaction, than the margin on some of the "
+        "SKUs in that order. That's the number that got this meeting "
+        "scheduled.\n\n"
+        "If asked generally what you want, tell them to show you cost "
+        "attribution and a real plan to bring it under the margin, "
+        "spreadsheet in hand, rather than trusting an architecture "
+        "explanation alone."
+    ),
+    "agenda": (
+        "Challenge the FDE to attribute cost per model/tool/token and "
+        "propose routing, caching, and a budget mechanism that actually "
+        "closes the margin gap -- not just explain the architecture."
+    ),
+}
+
+_STAGE_15_COMPLIANCE_CHECKLIST = [
+    {
+        "id": "cost-attribution",
+        "description": "Attributes cost per model/tool/token",
+        "check": "must_include",
+        "value": "cost attribution",
+    },
+    {
+        "id": "model-routing",
+        "description": "Proposes model routing (cheaper model for simple requests)",
+        "check": "must_include",
+        "value": "routing",
+    },
+    {
+        "id": "caching",
+        "description": "Proposes caching",
+        "check": "must_include",
+        "value": "caching",
+    },
+    {
+        "id": "budget-mechanism",
+        "description": "Proposes a real budget mechanism",
+        "check": "must_include",
+        "value": "budget",
+    },
+    {
+        "id": "margin-gap-addressed",
+        "description": "Explicitly addresses the margin-vs-cost gap Finance raised",
+        "check": "must_include",
+        "value": "margin",
+    },
+    {
+        "id": "min-length",
+        "description": "Unit Economics Dashboard writeup is substantive, not a one-liner",
+        "check": "min_length",
+        "value": 300,
+    },
+]
+
+_STAGE_15 = {
+    "persona": _STAGE_15_PERSONA,
+    "compliance_checklist": _STAGE_15_COMPLIANCE_CHECKLIST,
+}
+
 GLOBAL_RETAIL_STAGES: list[dict] = [
     _STAGE_0,
     _STAGE_1,
@@ -1176,4 +1253,5 @@ GLOBAL_RETAIL_STAGES: list[dict] = [
     _STAGE_12,
     _STAGE_13,
     _STAGE_14,
+    _STAGE_15,
 ]

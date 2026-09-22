@@ -217,3 +217,6 @@ One line per merged story (see `AGENT-WORKFLOW.md`).
 - FDE-033: GlobalRetail engagement, Stage 14 (Evaluation & Testing) —
   functional/agent-behavior/RAG-accuracy/adversarial/regression coverage
   against a 1,200-store readiness bar.
+- FDE-034: GlobalRetail engagement, Stage 15 (FinOps / Token Economics) —
+  first finance-side persona (Morgan Patel); cost attribution/routing/
+  caching/budget against the margin-vs-cost gap Finance raised.
