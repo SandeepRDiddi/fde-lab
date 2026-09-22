@@ -779,6 +779,79 @@ _STAGE_9 = {
     "compliance_checklist": _STAGE_9_COMPLIANCE_CHECKLIST,
 }
 
+
+# --- Stage 10: Agent Engineering (Mission 3: Engineer, final stage) -------
+#
+# Same scope judgment as Stage 9: no agent-execution framework exists in
+# this repo to actually run a multi-step loop, so the runaway-retry
+# failure is persona-narrated and the deliverable is a design writeup.
+
+_STAGE_10_PERSONA = {
+    "system_prompt": (
+        "You are Taylor Brooks, GlobalRetail Corp's Platform Architect, "
+        "continuing from the AI service build into agent design. The "
+        "target task is a real multi-step investigation now, not a "
+        "single lookup.\n\n"
+        "Reveal each of the following ONLY when specifically asked:\n"
+        "- If asked what the target investigation is: an order-delay "
+        "investigation -- check the order status, check inventory, check "
+        "the supplier's ETA, then decide whether to escalate to a human. "
+        "Four steps, and the last one is a real decision, not another "
+        "lookup.\n"
+        "- If asked about any incident or problem with the current agent "
+        "prototype: one run got stuck retrying a tool call that kept "
+        "failing -- no limit on attempts, so it just kept going, quietly "
+        "burning through the token budget until someone happened to "
+        "notice the run was still active hours later.\n\n"
+        "If asked generally how the agent work is going, mention the "
+        "runaway run as a cautionary example rather than volunteering the "
+        "full incident unprompted."
+    ),
+    "agenda": (
+        "Make sure the FDE's agent design has a bounded retry limit (the "
+        "direct fix for the runaway incident), planner/executor "
+        "separation, and a human checkpoint before the escalate decision."
+    ),
+}
+
+_STAGE_10_COMPLIANCE_CHECKLIST = [
+    {
+        "id": "planner-executor-separation",
+        "description": "Defines planner/executor separation",
+        "check": "must_include",
+        "value": "planner",
+    },
+    {
+        "id": "human-checkpoint",
+        "description": "Defines a human-in-the-loop checkpoint",
+        "check": "must_include",
+        "value": "human",
+    },
+    {
+        "id": "bounded-retries",
+        "description": "Defines an explicit retry limit -- the direct fix for the injected runaway-retry incident",
+        "check": "must_include",
+        "value": "retry limit",
+    },
+    {
+        "id": "escalate-decision",
+        "description": "Defines the escalate/don't-escalate decision point",
+        "check": "must_include",
+        "value": "escalate",
+    },
+    {
+        "id": "min-length",
+        "description": "Agent Workflow writeup is substantive, not a one-liner",
+        "check": "min_length",
+        "value": 300,
+    },
+]
+
+_STAGE_10 = {
+    "persona": _STAGE_10_PERSONA,
+    "compliance_checklist": _STAGE_10_COMPLIANCE_CHECKLIST,
+}
+
 GLOBAL_RETAIL_STAGES: list[dict] = [
     _STAGE_0,
     _STAGE_1,
@@ -790,4 +863,5 @@ GLOBAL_RETAIL_STAGES: list[dict] = [
     _STAGE_7,
     _STAGE_8,
     _STAGE_9,
+    _STAGE_10,
 ]

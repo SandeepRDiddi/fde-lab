@@ -202,3 +202,6 @@ One line per merged story (see `AGENT-WORKFLOW.md`).
   opens Mission 3 (Engineer); both injected failure modes are
   persona-narrated since this repo has no RAG service and the legacy-api
   mock has no 500 scenario built.
+- FDE-029: GlobalRetail engagement, Stage 10 (Agent Engineering) — closes
+  out Mission 3 (Engineer, Stages 9-10); agent workflow design with a
+  bounded retry limit fixing the injected runaway-retry incident.
