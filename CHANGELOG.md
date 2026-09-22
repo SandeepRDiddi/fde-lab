@@ -169,3 +169,8 @@ One line per merged story (see `AGENT-WORKFLOW.md`).
   conflicting-stakeholder persona, symptom-vs-cause + dual "customer"
   definition compliance checklist. Found and worked around a
   negation-window false positive in the FDE-007 compliance rule engine.
+- FDE-020: GlobalRetail engagement, Stage 2 (Current-State Assessment) —
+  wires FDE-005's real legacy-system mock as a genuine (not narrated)
+  blocked-access injection; second undocumented-dependency finding
+  conveyed via persona since the platform only supports one legacy system
+  per instance today.

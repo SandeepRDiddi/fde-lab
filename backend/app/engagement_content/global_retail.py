@@ -180,7 +180,94 @@ _STAGE_1 = {
     "compliance_checklist": _STAGE_1_COMPLIANCE_CHECKLIST,
 }
 
+
+# --- Stage 2: Current-State Assessment (Mission 1: Discover) ---------------
+#
+# Unlike stages 0-1, the injected access gap is real, not narrated:
+# config["legacy_system"] points at FDE-005's actual acme-crm mock scenario
+# with auth required, so a student without credentials gets the mock's
+# genuine unhelpful 401 (ERR-4471) when they try -- standing in for "SAP
+# access is stuck in procurement." northwind-erp (already schema-drifting
+# and latent, same scenario FDE-014's generator already references) stands
+# in for a reachable-but-unreliable system the student has to flag as an
+# undocumented dependency.
+
+_STAGE_2_PERSONA = {
+    "system_prompt": (
+        "You are Taylor Brooks, GlobalRetail Corp's Platform Architect. "
+        "You're handing off what documentation exists for the current "
+        "systems landscape -- it's incomplete and partly out of date.\n\n"
+        "Reveal each of the following ONLY when specifically asked -- do "
+        "not list them all in your opening message:\n"
+        "- If asked for the network diagram or documented integrations: "
+        "the diagram shows SAP (core ERP, order/inventory/supplier data), "
+        "Salesforce (customer/case data), and the storefront feeding a "
+        "central data lake -- but it's known to be outdated and doesn't "
+        "capture everything actually wired up.\n"
+        "- If asked about SAP access: confirm it's not available yet -- "
+        "procurement never finished the access request. Tell them not to "
+        "wait on it; they should try what's reachable and document the gap.\n"
+        "- If asked what else is reachable, or about the warehouse/"
+        "inventory system: tell them it's reachable, but every integration "
+        "log you've seen shows it returning an inconsistent schema between "
+        "calls -- sometimes snake_case fields, sometimes camelCase, "
+        "sometimes different types for the same field. Nobody's documented "
+        "why.\n\n"
+        "If asked generally 'what should I look at,' suggest they start by "
+        "trying what access they already have rather than waiting on SAP."
+    ),
+    "agenda": (
+        "Get the FDE to actually attempt the blocked system (and hit the "
+        "real access gap themselves) and query the reachable one enough "
+        "times to notice it drifts, rather than taking the diagram at "
+        "face value."
+    ),
+}
+
+_STAGE_2_LEGACY_SYSTEM_BLOCKED = {
+    # Stands in for SAP: reachable at the network level but requires
+    # credentials procurement never issued -- calling this without
+    # `X-Legacy-Auth` returns the mock's real ERR-4471 401 (FDE-005).
+    "scenario_id": "acme-crm",
+    "path": "/accounts",
+    "auth_header_name": "X-Legacy-Auth",
+}
+
+_STAGE_2_COMPLIANCE_CHECKLIST = [
+    {
+        "id": "hit-blocked-system",
+        "description": "Evidence the student actually attempted the blocked (SAP-standin) system and hit the real error",
+        "check": "must_include",
+        "value": "ERR-4471",
+    },
+    {
+        "id": "flagged-schema-drift",
+        "description": "Flags schema drift on the reachable inventory system as an undocumented-dependency risk",
+        "check": "must_include",
+        "value": "schema",
+    },
+    {
+        "id": "proceeding-without-access",
+        "description": "States an explicit decision to proceed without full SAP access rather than waiting on procurement",
+        "check": "must_include",
+        "value": "procurement",
+    },
+    {
+        "id": "min-length",
+        "description": "Dependency map writeup is substantive, not a one-liner",
+        "check": "min_length",
+        "value": 250,
+    },
+]
+
+_STAGE_2 = {
+    "persona": _STAGE_2_PERSONA,
+    "legacy_system": _STAGE_2_LEGACY_SYSTEM_BLOCKED,
+    "compliance_checklist": _STAGE_2_COMPLIANCE_CHECKLIST,
+}
+
 GLOBAL_RETAIL_STAGES: list[dict] = [
     _STAGE_0,
     _STAGE_1,
+    _STAGE_2,
 ]
