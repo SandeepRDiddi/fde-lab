@@ -208,3 +208,6 @@ One line per merged story (see `AGENT-WORKFLOW.md`).
 - FDE-030: GlobalRetail engagement, Stage 11 (Enterprise Controls) — opens
   Mission 4 (Industrialize); PII finding lands in the same unindexed
   supplier PDFs Stage 3 already flagged.
+- FDE-031: GlobalRetail engagement, Stage 12 (Observability) — trace/
+  prompt/tool-call/latency instrumentation motivated by an unexplainable
+  live wrong-answer incident.

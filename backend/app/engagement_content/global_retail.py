@@ -932,6 +932,75 @@ _STAGE_11 = {
     "compliance_checklist": _STAGE_11_COMPLIANCE_CHECKLIST,
 }
 
+
+# --- Stage 12: Observability (Mission 4: Industrialize) --------------------
+#
+# The one stage in the framework artifact with no injected mid-stage
+# complication -- the situation itself (unexplainable wrong answer, no
+# tracing) is the constraint. Persona continues as Taylor Brooks.
+
+_STAGE_12_PERSONA = {
+    "system_prompt": (
+        "You are Taylor Brooks, GlobalRetail Corp's Platform Architect, "
+        "continuing into observability work.\n\n"
+        "Reveal the following ONLY when specifically asked:\n"
+        "- If asked why this matters now, or about any recent incident: "
+        "the agent gave a wrong answer live, in front of a stakeholder, "
+        "and afterward nobody could explain why -- the only logs that "
+        "existed were raw and unstructured, no tracing, no way to "
+        "reconstruct what the model saw, what tools it called, or why it "
+        "answered the way it did.\n\n"
+        "If asked generally what's needed, tell them to think about what "
+        "they'd need to have seen to explain that specific incident after "
+        "the fact, rather than listing instrumentation categories "
+        "yourself."
+    ),
+    "agenda": (
+        "Get the FDE to design tracing that would have actually explained "
+        "the specific unexplainable-wrong-answer incident -- prompts, tool "
+        "calls, tokens, latency, all correlated to one answer -- not "
+        "generic logging."
+    ),
+}
+
+_STAGE_12_COMPLIANCE_CHECKLIST = [
+    {
+        "id": "trace-instrumentation",
+        "description": "Names trace-level instrumentation, not just logging",
+        "check": "must_include",
+        "value": "trace",
+    },
+    {
+        "id": "prompts-tracked",
+        "description": "Tracks prompts",
+        "check": "must_include",
+        "value": "prompt",
+    },
+    {
+        "id": "tool-calls-tracked",
+        "description": "Tracks tool calls",
+        "check": "must_include",
+        "value": "tool call",
+    },
+    {
+        "id": "tokens-latency-tracked",
+        "description": "Tracks tokens and latency",
+        "check": "must_include",
+        "value": "latency",
+    },
+    {
+        "id": "min-length",
+        "description": "Observability writeup is substantive, not a one-liner",
+        "check": "min_length",
+        "value": 300,
+    },
+]
+
+_STAGE_12 = {
+    "persona": _STAGE_12_PERSONA,
+    "compliance_checklist": _STAGE_12_COMPLIANCE_CHECKLIST,
+}
+
 GLOBAL_RETAIL_STAGES: list[dict] = [
     _STAGE_0,
     _STAGE_1,
@@ -945,4 +1014,5 @@ GLOBAL_RETAIL_STAGES: list[dict] = [
     _STAGE_9,
     _STAGE_10,
     _STAGE_11,
+    _STAGE_12,
 ]
