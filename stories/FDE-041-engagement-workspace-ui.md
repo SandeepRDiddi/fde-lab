@@ -55,7 +55,8 @@ would, in a browser, not via curl.
       (not just typecheck) — launch an engagement, chat with stage 0,
       submit, approve via instructor console, confirm stage 1 unlocks in
       the UI
-- [x] `npm run typecheck` clean; `npm run lint` — see log, pre-existing gap
+- [x] `npm run typecheck` and `npm run lint` both clean (ESLint config added
+      as a same-day follow-up — see log)
 - [x] Story status updated below
 - [x] STORIES.md row added
 - [x] CHANGELOG.md entry added
@@ -95,11 +96,20 @@ exactly — no existing field changed). `lib/backend.ts`: `getEngagement`,
 `createGlobalRetailEngagement`, following the existing server-side-fetch
 convention (never exposed to the browser directly).
 
-`npm run typecheck`: clean. `npm run lint`: this repo has never had an
-ESLint config committed (`next lint` prompts an interactive first-run setup
-that doesn't accept piped input in this environment) — a pre-existing gap,
-not introduced by this story; typecheck is the meaningful static check
-here and passed clean.
+`npm run typecheck`: clean. `npm run lint`: this repo had never had an
+ESLint config committed (`next lint`'s interactive first-run setup doesn't
+accept piped input in this environment) — a pre-existing gap, not
+introduced by this story.
+
+**Follow-up (same day):** set it up non-interactively instead of leaving
+the gap. `npx eslint@9`'s auto-resolve picked `eslint-config-next@16` (the
+current major) against this project's Next 14.2.5 — a real version
+mismatch, not just noise, so pinned explicitly: `eslint@^8` +
+`eslint-config-next@^14.2.5` (matching Next.js's own "Strict" scaffold
+option), plus `.eslintrc.json` (`{"extends": "next/core-web-vitals"}`) so
+the setup never prompts again. `npm run lint`: clean, zero warnings across
+the whole existing codebase (not just this story's new files) on the first
+real run.
 
 Verified live end to end with a real browser (Playwright, driven
 programmatically — screenshots captured, not just DOM assertions) against
