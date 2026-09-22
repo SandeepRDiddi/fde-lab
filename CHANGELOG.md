@@ -165,3 +165,7 @@ One line per merged story (see `AGENT-WORKFLOW.md`).
   stage-content story on FDE-017's primitive. Onboarding persona + brief
   compliance checklist, `POST /engagements/global-retail` convenience
   launcher.
+- FDE-019: GlobalRetail engagement, Stage 1 (Discovery & Problem Framing) —
+  conflicting-stakeholder persona, symptom-vs-cause + dual "customer"
+  definition compliance checklist. Found and worked around a
+  negation-window false positive in the FDE-007 compliance rule engine.

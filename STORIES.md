@@ -26,6 +26,7 @@ file's own `Status` field; keep this table in sync when a story moves.
 | FDE-016 | Python script task type (sandboxed code execution) | P1 | FDE-003, FDE-013, FDE-015 | Done |
 | FDE-017 | Engagement sequencing primitive | P0 | FDE-001, FDE-002, FDE-007 | Done |
 | FDE-018 | GlobalRetail engagement — Stage 0 (Mission Briefing) | P1 | FDE-004, FDE-017 | Done |
+| FDE-019 | GlobalRetail engagement — Stage 1 (Discovery & Problem Framing) | P1 | FDE-004, FDE-017, FDE-018 | Done |
 
 ## Pick-up order
 

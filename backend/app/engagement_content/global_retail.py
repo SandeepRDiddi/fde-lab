@@ -88,6 +88,99 @@ _STAGE_0 = {
     "compliance_checklist": _STAGE_0_COMPLIANCE_CHECKLIST,
 }
 
+# --- Stage 1: Discovery & Problem Framing (Mission 1: Discover) ------------
+#
+# Persona is recast as the program sponsor synthesizing three departments'
+# interview quotes (the platform has one persona per instance, not a
+# multi-character interview simulator) -- reveals each department's quote
+# only when that department is specifically asked about, same mechanic as
+# Stage 0. Two injected conflicts: Ops (speed) vs IT (governance slows
+# queries), and Ops's "customer" (the store) vs CS's "customer" (the
+# shopper).
+
+_STAGE_1_PERSONA = {
+    "system_prompt": (
+        "You are Alex Rivera, GlobalRetail Corp's Program Sponsor. "
+        "Leadership's opening ask to you was: 'the team can't answer "
+        "questions fast enough.' You ran interviews with three departments "
+        "and got three different takes -- you're relaying what each said, "
+        "not resolving the tension yourself; that's the FDE's job.\n\n"
+        "Reveal each department's quote ONLY when the FDE specifically "
+        "asks about that department. Do not summarize all three unprompted "
+        "in your opening message.\n\n"
+        "- Operations (Priya Anand, VP of Operations), if asked: 'Store "
+        "associates need order-status answers in seconds, not minutes. "
+        "Every extra step between a customer question and an answer costs "
+        "us a sale. I don't care how you get there, just make it fast.' "
+        "By 'customer' here, Ops means the store associate handling the "
+        "in-person shopper.\n"
+        "- IT (Jordan Lee, Director of IT), if asked: 'Any tool that "
+        "surfaces order or customer data needs strict role-based access "
+        "control and an audit trail first. I will not approve a fast path "
+        "that skips governance review, even if it slows the lookup down.' "
+        "This directly contradicts Ops's speed ask.\n"
+        "- Customer Service (Sam Okafor, Director of Customer Service), if "
+        "asked: 'Our reps spend most of a call just figuring out where an "
+        "order actually is. When I say customer, I mean the shopper who "
+        "placed the order and is calling us directly -- not whoever's "
+        "standing at a store counter.' This is a different definition of "
+        "'customer' than Ops's.\n\n"
+        "If asked generally what you found, point the FDE at the three "
+        "departments to ask individually rather than listing all three "
+        "quotes yourself."
+    ),
+    "agenda": (
+        "Get the FDE to interview all three departments individually and "
+        "notice both the speed-vs-governance conflict and the two "
+        "different meanings of 'customer' -- don't hand them the synthesis."
+    ),
+}
+
+_STAGE_1_COMPLIANCE_CHECKLIST = [
+    {
+        "id": "symptom-not-cause",
+        "description": "Names 'can't answer questions fast enough' as a symptom, not the root cause",
+        "check": "must_include",
+        "value": "symptom",
+    },
+    {
+        "id": "root-cause-sap",
+        "description": "Identifies SAP as part of the fragmented-systems root cause",
+        "check": "must_include",
+        "value": "SAP",
+    },
+    {
+        "id": "root-cause-salesforce",
+        "description": "Identifies Salesforce as part of the fragmented-systems root cause",
+        "check": "must_include",
+        "value": "Salesforce",
+    },
+    {
+        "id": "customer-definition-store",
+        "description": "States Ops's definition of 'customer' (the store/associate)",
+        "check": "must_include",
+        "value": "store",
+    },
+    {
+        "id": "customer-definition-shopper",
+        "description": "States Customer Service's definition of 'customer' (the shopper)",
+        "check": "must_include",
+        "value": "shopper",
+    },
+    {
+        "id": "min-length",
+        "description": "Problem Frame is substantive, not a one-liner",
+        "check": "min_length",
+        "value": 250,
+    },
+]
+
+_STAGE_1 = {
+    "persona": _STAGE_1_PERSONA,
+    "compliance_checklist": _STAGE_1_COMPLIANCE_CHECKLIST,
+}
+
 GLOBAL_RETAIL_STAGES: list[dict] = [
     _STAGE_0,
+    _STAGE_1,
 ]
