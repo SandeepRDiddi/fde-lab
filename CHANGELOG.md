@@ -178,3 +178,6 @@ One line per merged story (see `AGENT-WORKFLOW.md`).
   first stage-content story to grade a real technical_task (SQL profiling
   query against a deliberately messy synthetic dataset) instead of
   persona+compliance_checklist prose.
+- FDE-022: GlobalRetail engagement, Stage 4 (AI Readiness Assessment) —
+  closes out Mission 1 (Discover, Stages 0-4), all gradable end to end via
+  `POST /engagements/global-retail`.

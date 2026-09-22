@@ -333,9 +333,91 @@ _STAGE_3 = {
     "technical_task": _STAGE_3_TECHNICAL_TASK,
 }
 
+
+# --- Stage 4: AI Readiness Assessment (Mission 1: Discover, final stage) ---
+#
+# Back to persona + compliance_checklist (same mechanic as stages 0-2).
+# Persona is Jordan Lee, already introduced in Stage 1 as the
+# governance-focused IT Director, recast here as the skeptical stakeholder
+# the FDE has to justify the AI/deterministic split to -- continuity rather
+# than a new character.
+
+_STAGE_4_PERSONA = {
+    "system_prompt": (
+        "You are Jordan Lee, GlobalRetail Corp's Director of IT. "
+        "Leadership's opening ask was 'we want an AI agent' -- you're "
+        "skeptical that's the right frame for every use case on the list, "
+        "and you want the FDE to justify their classification, not just "
+        "assert it.\n\n"
+        "Reveal each of the following ONLY when specifically asked:\n"
+        "- If asked what's on the candidate use case list: order-status "
+        "lookup, delay root-cause investigation, supplier escalation "
+        "decisions, and return-eligibility determination.\n"
+        "- If asked about return-eligibility specifically: it is governed "
+        "by consumer protection law and company policy -- this is not a "
+        "judgment call like the others, and an LLM must not be the one "
+        "deciding it, full stop. Any design that puts an LLM in that "
+        "decision path gets rejected in review, no exceptions.\n"
+        "- If pushed on why the other three are fine for AI: order status "
+        "is a simple lookup, root-cause investigation benefits from "
+        "AI-assisted synthesis across systems but a human still decides, "
+        "and supplier escalation is complex enough to warrant an agentic "
+        "workflow -- but you want the FDE to say this back to you in "
+        "their own reasoning, not just hear it from you.\n\n"
+        "If asked generally what you think, push back and ask them to "
+        "classify each use case themselves and defend it, rather than "
+        "handing them the answer."
+    ),
+    "agenda": (
+        "Push the FDE to justify a deterministic/AI-assisted/agentic split "
+        "for all four use cases, and make sure they treat "
+        "return-eligibility as non-negotiably deterministic, not a "
+        "judgment call."
+    ),
+}
+
+_STAGE_4_COMPLIANCE_CHECKLIST = [
+    {
+        "id": "lookup-deterministic",
+        "description": "Classifies order-status lookup as deterministic",
+        "check": "must_include",
+        "value": "deterministic",
+    },
+    {
+        "id": "investigation-ai-assisted",
+        "description": "Classifies delay root-cause investigation as AI-assisted",
+        "check": "must_include",
+        "value": "AI-assisted",
+    },
+    {
+        "id": "action-agentic",
+        "description": "Classifies supplier escalation as agentic",
+        "check": "must_include",
+        "value": "agentic",
+    },
+    {
+        "id": "return-eligibility-legal",
+        "description": "Names return-eligibility as legally constrained, not an LLM judgment call",
+        "check": "must_include",
+        "value": "consumer protection law",
+    },
+    {
+        "id": "min-length",
+        "description": "AI Readiness Matrix is substantive, not a one-liner",
+        "check": "min_length",
+        "value": 300,
+    },
+]
+
+_STAGE_4 = {
+    "persona": _STAGE_4_PERSONA,
+    "compliance_checklist": _STAGE_4_COMPLIANCE_CHECKLIST,
+}
+
 GLOBAL_RETAIL_STAGES: list[dict] = [
     _STAGE_0,
     _STAGE_1,
     _STAGE_2,
     _STAGE_3,
+    _STAGE_4,
 ]
