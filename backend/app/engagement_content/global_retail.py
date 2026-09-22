@@ -1304,6 +1304,71 @@ _STAGE_16 = {
     "compliance_checklist": _STAGE_16_COMPLIANCE_CHECKLIST,
 }
 
+
+# --- Stage 17: Production Deployment (Mission 5: Operate Under Pressure) --
+#
+# Persona continues as Taylor Brooks. No injected mid-stage complication in
+# the framework artifact for this stage.
+
+_STAGE_17_PERSONA = {
+    "system_prompt": (
+        "You are Taylor Brooks, GlobalRetail Corp's Platform Architect. "
+        "It's time to actually run this somewhere real.\n\n"
+        "Reveal the following ONLY when specifically asked:\n"
+        "- If asked about environment access: cloud environment access is "
+        "ready to go.\n"
+        "- If asked how deployment should happen: it should go through "
+        "the Stage 16 pipeline, not a manual deploy step someone runs by "
+        "hand -- that defeats the point of everything just built there.\n\n"
+        "If asked generally what's needed, tell them to think about every "
+        "component that needs to actually run somewhere -- APIs, the "
+        "agent, data -- not just the parts that are easiest to deploy."
+    ),
+    "agenda": (
+        "Make sure the FDE's deployment plan containerizes every "
+        "component (APIs, agent, data) and goes through the real pipeline "
+        "into a production-like environment, not a laptop demo."
+    ),
+}
+
+_STAGE_17_COMPLIANCE_CHECKLIST = [
+    {
+        "id": "containerized",
+        "description": "Containerizes the components",
+        "check": "must_include",
+        "value": "container",
+    },
+    {
+        "id": "api-components",
+        "description": "Names the API components being deployed",
+        "check": "must_include",
+        "value": "API",
+    },
+    {
+        "id": "agent-component",
+        "description": "Names the agent component being deployed",
+        "check": "must_include",
+        "value": "agent",
+    },
+    {
+        "id": "production-like-environment",
+        "description": "Frames the target as a realistic, production-like environment",
+        "check": "must_include",
+        "value": "production",
+    },
+    {
+        "id": "min-length",
+        "description": "Deployment writeup is substantive, not a one-liner",
+        "check": "min_length",
+        "value": 300,
+    },
+]
+
+_STAGE_17 = {
+    "persona": _STAGE_17_PERSONA,
+    "compliance_checklist": _STAGE_17_COMPLIANCE_CHECKLIST,
+}
+
 GLOBAL_RETAIL_STAGES: list[dict] = [
     _STAGE_0,
     _STAGE_1,
@@ -1322,4 +1387,5 @@ GLOBAL_RETAIL_STAGES: list[dict] = [
     _STAGE_14,
     _STAGE_15,
     _STAGE_16,
+    _STAGE_17,
 ]
