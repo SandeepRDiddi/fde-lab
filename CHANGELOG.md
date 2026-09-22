@@ -220,3 +220,6 @@ One line per merged story (see `AGENT-WORKFLOW.md`).
 - FDE-034: GlobalRetail engagement, Stage 15 (FinOps / Token Economics) —
   first finance-side persona (Morgan Patel); cost attribution/routing/
   caching/budget against the margin-vs-cost gap Finance raised.
+- FDE-035: GlobalRetail engagement, Stage 16 (DevSecOps / AIDLC) — closes
+  out Mission 4 (Industrialize, Stages 11-16); automated pipeline gate
+  wiring the Stage 14 evaluation harness in for real.

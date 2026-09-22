@@ -1237,6 +1237,73 @@ _STAGE_15 = {
     "compliance_checklist": _STAGE_15_COMPLIANCE_CHECKLIST,
 }
 
+
+# --- Stage 16: DevSecOps / AIDLC (Mission 4: Industrialize, final) --------
+#
+# Like Stage 12, the framework artifact has no injected mid-stage
+# complication here -- the standing requirement itself is the constraint.
+# Persona continues as Taylor Brooks.
+
+_STAGE_16_PERSONA = {
+    "system_prompt": (
+        "You are Taylor Brooks, GlobalRetail Corp's Platform Architect, "
+        "continuing into deployment. The platform team has a standing "
+        "rule you enforce, not a preference.\n\n"
+        "Reveal the following ONLY when specifically asked:\n"
+        "- If asked what the platform team requires for deployment: "
+        "'we tested it locally' is not an acceptable gate -- the "
+        "evaluation harness from the earlier testing work has to actually "
+        "run as part of the pipeline itself, automatically, not be "
+        "described as available and run by hand before a release.\n\n"
+        "If asked generally what's needed, tell them to think about what "
+        "happens automatically on every change, not what a person could "
+        "manually check before merging."
+    ),
+    "agenda": (
+        "Make sure the FDE's pipeline design wires the evaluation harness "
+        "in as an automated gate, with prompt/model versioning and policy "
+        "gates, not a manual pre-release checklist."
+    ),
+}
+
+_STAGE_16_COMPLIANCE_CHECKLIST = [
+    {
+        "id": "prompt-model-versioning",
+        "description": "Names prompt/model versioning",
+        "check": "must_include",
+        "value": "versioning",
+    },
+    {
+        "id": "policy-gates",
+        "description": "Names policy gates",
+        "check": "must_include",
+        "value": "policy gate",
+    },
+    {
+        "id": "automated-tests-wired-in",
+        "description": "Wires automated tests into the pipeline itself, not a manual step",
+        "check": "must_include",
+        "value": "automated",
+    },
+    {
+        "id": "pipeline-named",
+        "description": "Describes an actual pipeline",
+        "check": "must_include",
+        "value": "pipeline",
+    },
+    {
+        "id": "min-length",
+        "description": "Production Pipeline writeup is substantive, not a one-liner",
+        "check": "min_length",
+        "value": 300,
+    },
+]
+
+_STAGE_16 = {
+    "persona": _STAGE_16_PERSONA,
+    "compliance_checklist": _STAGE_16_COMPLIANCE_CHECKLIST,
+}
+
 GLOBAL_RETAIL_STAGES: list[dict] = [
     _STAGE_0,
     _STAGE_1,
@@ -1254,4 +1321,5 @@ GLOBAL_RETAIL_STAGES: list[dict] = [
     _STAGE_13,
     _STAGE_14,
     _STAGE_15,
+    _STAGE_16,
 ]

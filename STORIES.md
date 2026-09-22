@@ -42,6 +42,7 @@ file's own `Status` field; keep this table in sync when a story moves.
 | FDE-032 | GlobalRetail engagement — Stage 13 (Failure Engineering) | P1 | FDE-004, FDE-017, FDE-020, FDE-031 | Done |
 | FDE-033 | GlobalRetail engagement — Stage 14 (Evaluation & Testing) | P1 | FDE-004, FDE-017, FDE-030, FDE-032 | Done |
 | FDE-034 | GlobalRetail engagement — Stage 15 (FinOps / Token Economics) | P1 | FDE-004, FDE-017, FDE-033 | Done |
+| FDE-035 | GlobalRetail engagement — Stage 16 (DevSecOps / AIDLC) | P1 | FDE-004, FDE-017, FDE-033, FDE-034 | Done |
 
 ## Pick-up order
 
