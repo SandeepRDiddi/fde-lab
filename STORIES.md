@@ -28,6 +28,7 @@ file's own `Status` field; keep this table in sync when a story moves.
 | FDE-018 | GlobalRetail engagement — Stage 0 (Mission Briefing) | P1 | FDE-004, FDE-017 | Done |
 | FDE-019 | GlobalRetail engagement — Stage 1 (Discovery & Problem Framing) | P1 | FDE-004, FDE-017, FDE-018 | Done |
 | FDE-020 | GlobalRetail engagement — Stage 2 (Current-State Assessment) | P1 | FDE-004, FDE-005, FDE-017, FDE-019 | Done |
+| FDE-021 | GlobalRetail engagement — Stage 3 (Data & Knowledge Discovery) | P1 | FDE-003, FDE-004, FDE-013, FDE-017, FDE-020 | Done |
 
 ## Pick-up order
 

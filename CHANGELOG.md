@@ -174,3 +174,7 @@ One line per merged story (see `AGENT-WORKFLOW.md`).
   blocked-access injection; second undocumented-dependency finding
   conveyed via persona since the platform only supports one legacy system
   per instance today.
+- FDE-021: GlobalRetail engagement, Stage 3 (Data & Knowledge Discovery) —
+  first stage-content story to grade a real technical_task (SQL profiling
+  query against a deliberately messy synthetic dataset) instead of
+  persona+compliance_checklist prose.

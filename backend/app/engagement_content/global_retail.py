@@ -266,8 +266,76 @@ _STAGE_2 = {
     "compliance_checklist": _STAGE_2_COMPLIANCE_CHECKLIST,
 }
 
+
+# --- Stage 3: Data & Knowledge Discovery (Mission 1: Discover) -------------
+#
+# First stage to use config["data_gen"] (FDE-003) and config["technical_task"]
+# (FDE-013) -- "profile the data" and "assess quality" are concrete, gradable
+# work against a real (deliberately messy) synthetic dataset, not something a
+# prose rubric can check. Per FDE-014's documented lesson, a technical_task's
+# submission content IS the query, so it can't also carry a
+# compliance_checklist in the same field -- the "identify ownership" / "find
+# the real gaps" half of the stage stays in the persona instead.
+
+_STAGE_3_PERSONA = {
+    "system_prompt": (
+        "You are Taylor Brooks, GlobalRetail Corp's Platform Architect, "
+        "continuing from the current-state handoff. Now the FDE needs to "
+        "understand the data itself, not just the systems.\n\n"
+        "Reveal each of the following ONLY when specifically asked:\n"
+        "- If asked who owns which source's data: SAP data (orders, "
+        "inventory, suppliers) is owned by the Operations team; Salesforce "
+        "(customer/case data) is owned by Customer Service; the warehouse "
+        "export is owned by Logistics. Nobody owns a canonical definition "
+        "of 'order' across all three -- each team maintains its own.\n"
+        "- If asked about documentation or a data dictionary: there isn't "
+        "one. About half of the supplier contracts and SOPs exist only as "
+        "unindexed PDFs on a shared drive -- nobody's extracted structured "
+        "data from them.\n"
+        "- If asked what to look at first: point them at the order export "
+        "they already have access to and suggest they profile it directly "
+        "rather than waiting for documentation that doesn't exist.\n\n"
+        "If asked generally what they should know, prompt them to ask "
+        "about ownership or documentation specifically rather than "
+        "summarizing both yourself."
+    ),
+    "agenda": (
+        "Get the FDE to actually profile the real dataset for a concrete "
+        "quality gap, and to ask about ownership/documentation rather than "
+        "assume a data dictionary exists."
+    ),
+}
+
+_STAGE_3_DATA_GEN = {
+    "domain": "ecommerce_orders",
+    "row_count": 300,
+    # Deliberately messy (FDE-003's "high" profile: 20% null rate, schema
+    # drift, 12% duplicate rate) so there's a genuine completeness gap to
+    # find, not a clean dataset with nothing to profile.
+    "messiness": "high",
+}
+
+_STAGE_3_TECHNICAL_TASK = {
+    "task_type": "sql_query",
+    "table_name": "orders",
+    "instructions": (
+        "Before anyone can define canonical entities, you need to know how "
+        "bad the source data actually is. Profile the order export for a "
+        "concrete completeness gap: write a single SELECT that returns how "
+        "many order records are missing a customer_email."
+    ),
+    "reference_query": "SELECT COUNT(*) FROM orders WHERE customer_email IS NULL",
+}
+
+_STAGE_3 = {
+    "persona": _STAGE_3_PERSONA,
+    "data_gen": _STAGE_3_DATA_GEN,
+    "technical_task": _STAGE_3_TECHNICAL_TASK,
+}
+
 GLOBAL_RETAIL_STAGES: list[dict] = [
     _STAGE_0,
     _STAGE_1,
     _STAGE_2,
+    _STAGE_3,
 ]
