@@ -191,3 +191,7 @@ One line per merged story (see `AGENT-WORKFLOW.md`).
 - FDE-025: GlobalRetail engagement, Stage 6 (Semantic & Context Layer) —
   canonical "order"/"delay" definitions reconciling three systems' meanings
   of each.
+- FDE-026: GlobalRetail engagement, Stage 7 (Enterprise Architecture) —
+  Architecture Review Board rejects direct-database-access outright; found
+  a possessive-apostrophe tokenizer quirk in the compliance rule engine
+  while writing fixtures.
