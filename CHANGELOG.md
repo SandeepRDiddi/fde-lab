@@ -161,3 +161,83 @@ One line per merged story (see `AGENT-WORKFLOW.md`).
   `ScenarioInstance` stages, approval-triggered (not time-triggered) unlock,
   additive cross-stage context. Foundation for the 22-stage FDE Engagement
   Framework content stories (FDE-018+).
+- FDE-018: GlobalRetail engagement, Stage 0 (Mission Briefing) — first
+  stage-content story on FDE-017's primitive. Onboarding persona + brief
+  compliance checklist, `POST /engagements/global-retail` convenience
+  launcher.
+- FDE-019: GlobalRetail engagement, Stage 1 (Discovery & Problem Framing) —
+  conflicting-stakeholder persona, symptom-vs-cause + dual "customer"
+  definition compliance checklist. Found and worked around a
+  negation-window false positive in the FDE-007 compliance rule engine.
+- FDE-020: GlobalRetail engagement, Stage 2 (Current-State Assessment) —
+  wires FDE-005's real legacy-system mock as a genuine (not narrated)
+  blocked-access injection; second undocumented-dependency finding
+  conveyed via persona since the platform only supports one legacy system
+  per instance today.
+- FDE-021: GlobalRetail engagement, Stage 3 (Data & Knowledge Discovery) —
+  first stage-content story to grade a real technical_task (SQL profiling
+  query against a deliberately messy synthetic dataset) instead of
+  persona+compliance_checklist prose.
+- FDE-022: GlobalRetail engagement, Stage 4 (AI Readiness Assessment) —
+  closes out Mission 1 (Discover, Stages 0-4), all gradable end to end via
+  `POST /engagements/global-retail`.
+- FDE-023: Surface engagement context to the persona — found and fixed a
+  real gap in FDE-017: accumulated cross-stage context was being written to
+  config but never read by persona-service's system prompt, so it never
+  actually reached a later stage's conversation.
+- FDE-024: GlobalRetail engagement, Stage 5 (Solution Framing) — opens
+  Mission 2 (Architect); first stage-content story to actually exercise
+  FDE-023's cross-stage context fix.
+- FDE-025: GlobalRetail engagement, Stage 6 (Semantic & Context Layer) —
+  canonical "order"/"delay" definitions reconciling three systems' meanings
+  of each.
+- FDE-026: GlobalRetail engagement, Stage 7 (Enterprise Architecture) —
+  Architecture Review Board rejects direct-database-access outright; found
+  a possessive-apostrophe tokenizer quirk in the compliance rule engine
+  while writing fixtures.
+- FDE-027: GlobalRetail engagement, Stage 8 (Data Contracts & Integration)
+  — closes out Mission 2 (Architect, Stages 5-8); data contract fixes the
+  same schema-drifting warehouse integration Stage 2 already diagnosed.
+- FDE-028: GlobalRetail engagement, Stage 9 (Build the AI Capability) —
+  opens Mission 3 (Engineer); both injected failure modes are
+  persona-narrated since this repo has no RAG service and the legacy-api
+  mock has no 500 scenario built.
+- FDE-029: GlobalRetail engagement, Stage 10 (Agent Engineering) — closes
+  out Mission 3 (Engineer, Stages 9-10); agent workflow design with a
+  bounded retry limit fixing the injected runaway-retry incident.
+- FDE-030: GlobalRetail engagement, Stage 11 (Enterprise Controls) — opens
+  Mission 4 (Industrialize); PII finding lands in the same unindexed
+  supplier PDFs Stage 3 already flagged.
+- FDE-031: GlobalRetail engagement, Stage 12 (Observability) — trace/
+  prompt/tool-call/latency instrumentation motivated by an unexplainable
+  live wrong-answer incident.
+- FDE-032: GlobalRetail engagement, Stage 13 (Failure Engineering) —
+  retry/fallback/circuit-breaker/dead-letter playbook proven against the
+  same SAP-standin dependency Stage 2 already live-touched.
+- FDE-033: GlobalRetail engagement, Stage 14 (Evaluation & Testing) —
+  functional/agent-behavior/RAG-accuracy/adversarial/regression coverage
+  against a 1,200-store readiness bar.
+- FDE-034: GlobalRetail engagement, Stage 15 (FinOps / Token Economics) —
+  first finance-side persona (Morgan Patel); cost attribution/routing/
+  caching/budget against the margin-vs-cost gap Finance raised.
+- FDE-035: GlobalRetail engagement, Stage 16 (DevSecOps / AIDLC) — closes
+  out Mission 4 (Industrialize, Stages 11-16); automated pipeline gate
+  wiring the Stage 14 evaluation harness in for real.
+- FDE-036: GlobalRetail engagement, Stage 17 (Production Deployment) —
+  opens Mission 5 (Operate Under Pressure); containerized deploy through
+  the real Stage 16 pipeline, not a manual step.
+- FDE-037: GlobalRetail engagement, Stage 18 (Incident Simulation) — RCA
+  for a 2s-to-18s latency spike with no matching deploy, communicated
+  while still unfolding.
+- FDE-038: GlobalRetail engagement, Stage 19 (Change Request) — closes out
+  Mission 5 (Operate Under Pressure, Stages 17-19); Stage 8's data contract
+  survives a live schema break, competing capability ask triaged
+  separately.
+- FDE-039: GlobalRetail engagement, Stage 20 (Executive Demonstration) —
+  opens Mission 6 (Deliver the Outcome); one demo, two audiences (CIO +
+  Ops), plus a last-minute feature ask priced live.
+- FDE-040: GlobalRetail engagement, Stage 21 (Handover & Adoption) — final
+  stage of all 22. Added a full end-to-end test (`POST
+  /engagements/global-retail`, then all 22 stages submitted and approved
+  in order) proving the whole engagement completes for real, not just
+  in pieces.

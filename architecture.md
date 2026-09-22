@@ -100,7 +100,15 @@ conversation — either path below picks this up automatically:
 - `POST /scenario-instances/{id}/persona/pivot` updates `agenda` the same way,
   for a manual/instructor-triggered pivot outside the scripted-time path.
 Neither path calls the other — they're two independent ways to reach the same
-`config["persona"]` update, not a call chain. No real PromptOps Gateway exists
+`config["persona"]` update, not a call chain. `_build_system_prompt`
+(`app/routers/conversations.py`) also reads `config["engagement_context"]`
+when present (FDE-023) and renders each prior stage's approved output
+(ordered by stage number) into the system prompt, ahead of the persona's own
+`system_prompt`/`agenda` — otherwise FDE-017's carried-forward context would
+sit unused in the database and a later stage's persona would have no actual
+knowledge of what the student produced earlier in the same engagement. Read
+fresh on every turn, same as the rest of the config, so it picks up as soon
+as the engagement advances. No real PromptOps Gateway exists
 yet, and a hosted frontier-model API (Claude, GPT) costs real money per call
 for a training lab, so `app/gateway.py` talks to an open-weight model via the
 OpenAI-compatible chat/completions contract instead — the shape Groq,

@@ -25,6 +25,29 @@ file's own `Status` field; keep this table in sync when a story moves.
 | FDE-015 | Technical task workspace (dataset preview, run-before-submit, real editor) | P1 | FDE-003, FDE-008, FDE-013 | Done |
 | FDE-016 | Python script task type (sandboxed code execution) | P1 | FDE-003, FDE-013, FDE-015 | Done |
 | FDE-017 | Engagement sequencing primitive | P0 | FDE-001, FDE-002, FDE-007 | Done |
+| FDE-018 | GlobalRetail engagement — Stage 0 (Mission Briefing) | P1 | FDE-004, FDE-017 | Done |
+| FDE-019 | GlobalRetail engagement — Stage 1 (Discovery & Problem Framing) | P1 | FDE-004, FDE-017, FDE-018 | Done |
+| FDE-020 | GlobalRetail engagement — Stage 2 (Current-State Assessment) | P1 | FDE-004, FDE-005, FDE-017, FDE-019 | Done |
+| FDE-021 | GlobalRetail engagement — Stage 3 (Data & Knowledge Discovery) | P1 | FDE-003, FDE-004, FDE-013, FDE-017, FDE-020 | Done |
+| FDE-022 | GlobalRetail engagement — Stage 4 (AI Readiness Assessment) | P1 | FDE-004, FDE-017, FDE-021 | Done |
+| FDE-023 | Surface engagement context to the persona | P0 | FDE-004, FDE-017 | Done |
+| FDE-024 | GlobalRetail engagement — Stage 5 (Solution Framing) | P1 | FDE-004, FDE-017, FDE-022, FDE-023 | Done |
+| FDE-025 | GlobalRetail engagement — Stage 6 (Semantic & Context Layer) | P1 | FDE-004, FDE-017, FDE-021, FDE-024 | Done |
+| FDE-026 | GlobalRetail engagement — Stage 7 (Enterprise Architecture) | P1 | FDE-004, FDE-017, FDE-025 | Done |
+| FDE-027 | GlobalRetail engagement — Stage 8 (Data Contracts & Integration) | P1 | FDE-004, FDE-017, FDE-026 | Done |
+| FDE-028 | GlobalRetail engagement — Stage 9 (Build the AI Capability) | P1 | FDE-004, FDE-017, FDE-027 | Done |
+| FDE-029 | GlobalRetail engagement — Stage 10 (Agent Engineering) | P1 | FDE-004, FDE-017, FDE-028 | Done |
+| FDE-030 | GlobalRetail engagement — Stage 11 (Enterprise Controls) | P1 | FDE-004, FDE-017, FDE-021, FDE-029 | Done |
+| FDE-031 | GlobalRetail engagement — Stage 12 (Observability) | P1 | FDE-004, FDE-017, FDE-030 | Done |
+| FDE-032 | GlobalRetail engagement — Stage 13 (Failure Engineering) | P1 | FDE-004, FDE-017, FDE-020, FDE-031 | Done |
+| FDE-033 | GlobalRetail engagement — Stage 14 (Evaluation & Testing) | P1 | FDE-004, FDE-017, FDE-030, FDE-032 | Done |
+| FDE-034 | GlobalRetail engagement — Stage 15 (FinOps / Token Economics) | P1 | FDE-004, FDE-017, FDE-033 | Done |
+| FDE-035 | GlobalRetail engagement — Stage 16 (DevSecOps / AIDLC) | P1 | FDE-004, FDE-017, FDE-033, FDE-034 | Done |
+| FDE-036 | GlobalRetail engagement — Stage 17 (Production Deployment) | P1 | FDE-004, FDE-017, FDE-035 | Done |
+| FDE-037 | GlobalRetail engagement — Stage 18 (Incident Simulation) | P1 | FDE-004, FDE-017, FDE-031, FDE-036 | Done |
+| FDE-038 | GlobalRetail engagement — Stage 19 (Change Request) | P1 | FDE-004, FDE-017, FDE-027, FDE-037 | Done |
+| FDE-039 | GlobalRetail engagement — Stage 20 (Executive Demonstration) | P1 | FDE-004, FDE-017, FDE-038 | Done |
+| FDE-040 | GlobalRetail engagement — Stage 21 (Handover & Adoption) | P1 | FDE-004, FDE-017, FDE-023, FDE-039 | Done |
 
 ## Pick-up order
 
@@ -34,6 +57,15 @@ v1 demo committed to in `intent.md` — the P1 stories (005, 006, 007, 009) roun
 the remaining enterprise-friction and instructor-facing pieces. FDE-011 (LTI) and
 FDE-012 (Kubernetes) are Phase 3-4 work — see `ROADMAP.md` for the full phased plan
 and why they're sequenced after the core loop.
+
+FDE-017 (a new sequencing primitive, `Engagement`) through FDE-040 authored
+"The FDE Engagement Framework" — a 22-stage, 6-mission continuous engagement
+(see the artifact of the same name), worked through end to end as the
+GlobalRetail scenario. FDE-017 is the platform primitive; FDE-023 is a
+mid-course fix (cross-stage context wasn't reaching the persona); FDE-018/
+019/.../040 each author one stage's content, in stage order, on top of
+`backend/app/engagement_content/global_retail.py`. Launch the whole thing via
+`POST /engagements/global-retail`.
 
 See `AGENT-WORKFLOW.md` for how a story moves from this table into working, merged,
 documented code.
