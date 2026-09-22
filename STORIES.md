@@ -47,6 +47,7 @@ file's own `Status` field; keep this table in sync when a story moves.
 | FDE-037 | GlobalRetail engagement — Stage 18 (Incident Simulation) | P1 | FDE-004, FDE-017, FDE-031, FDE-036 | Done |
 | FDE-038 | GlobalRetail engagement — Stage 19 (Change Request) | P1 | FDE-004, FDE-017, FDE-027, FDE-037 | Done |
 | FDE-039 | GlobalRetail engagement — Stage 20 (Executive Demonstration) | P1 | FDE-004, FDE-017, FDE-038 | Done |
+| FDE-040 | GlobalRetail engagement — Stage 21 (Handover & Adoption) | P1 | FDE-004, FDE-017, FDE-023, FDE-039 | Done |
 
 ## Pick-up order
 
@@ -56,6 +57,15 @@ v1 demo committed to in `intent.md` — the P1 stories (005, 006, 007, 009) roun
 the remaining enterprise-friction and instructor-facing pieces. FDE-011 (LTI) and
 FDE-012 (Kubernetes) are Phase 3-4 work — see `ROADMAP.md` for the full phased plan
 and why they're sequenced after the core loop.
+
+FDE-017 (a new sequencing primitive, `Engagement`) through FDE-040 authored
+"The FDE Engagement Framework" — a 22-stage, 6-mission continuous engagement
+(see the artifact of the same name), worked through end to end as the
+GlobalRetail scenario. FDE-017 is the platform primitive; FDE-023 is a
+mid-course fix (cross-stage context wasn't reaching the persona); FDE-018/
+019/.../040 each author one stage's content, in stage order, on top of
+`backend/app/engagement_content/global_retail.py`. Launch the whole thing via
+`POST /engagements/global-retail`.
 
 See `AGENT-WORKFLOW.md` for how a story moves from this table into working, merged,
 documented code.

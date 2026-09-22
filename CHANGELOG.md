@@ -236,3 +236,8 @@ One line per merged story (see `AGENT-WORKFLOW.md`).
 - FDE-039: GlobalRetail engagement, Stage 20 (Executive Demonstration) —
   opens Mission 6 (Deliver the Outcome); one demo, two audiences (CIO +
   Ops), plus a last-minute feature ask priced live.
+- FDE-040: GlobalRetail engagement, Stage 21 (Handover & Adoption) — final
+  stage of all 22. Added a full end-to-end test (`POST
+  /engagements/global-retail`, then all 22 stages submitted and approved
+  in order) proving the whole engagement completes for real, not just
+  in pieces.

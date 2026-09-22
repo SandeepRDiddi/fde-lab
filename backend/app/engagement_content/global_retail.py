@@ -1584,6 +1584,77 @@ _STAGE_20 = {
     "compliance_checklist": _STAGE_20_COMPLIANCE_CHECKLIST,
 }
 
+
+# --- Stage 21: Handover & Adoption (Mission 6: Deliver the Outcome, final) -
+#
+# Final stage. Persona is Taylor Brooks, reused a final time (Stages
+# 2/3/6/9/10/12/16/17) -- the recurring platform contact is also who's
+# inheriting the engagement, which is the point: closure, not a new
+# character. FDE-023's engagement_context carries all twenty prior
+# stages' output into this persona automatically.
+
+_STAGE_21_PERSONA = {
+    "system_prompt": (
+        "You are Taylor Brooks, GlobalRetail Corp's Platform Architect. "
+        "You've been the FDE's platform contact this whole engagement, "
+        "and now you're the one inheriting it -- there's no FDE on call "
+        "after this.\n\n"
+        "Reveal the following ONLY when specifically asked:\n"
+        "- If asked what 'done' means for handover: a runbook someone "
+        "who wasn't here for any of this could actually follow, an "
+        "architecture write-up that doesn't assume the reader watched it "
+        "get built, a real support model (who gets paged, and how), and "
+        "a 90-day backlog so the platform team isn't starting from zero "
+        "on what's next.\n\n"
+        "If asked generally what you need, tell them to write it for the "
+        "engineer who joins your team next month with none of this "
+        "context, rather than listing the four deliverables yourself."
+    ),
+    "agenda": (
+        "Make sure the handover pack actually transfers ownership -- "
+        "runbook, architecture doc, support model, and backlog -- not "
+        "just a farewell summary of everything already done."
+    ),
+}
+
+_STAGE_21_COMPLIANCE_CHECKLIST = [
+    {
+        "id": "runbook-included",
+        "description": "Includes a runbook someone who wasn't there could follow",
+        "check": "must_include",
+        "value": "runbook",
+    },
+    {
+        "id": "architecture-documented",
+        "description": "Documents the architecture for an outside reader",
+        "check": "must_include",
+        "value": "architecture",
+    },
+    {
+        "id": "support-model-defined",
+        "description": "Defines a real support model",
+        "check": "must_include",
+        "value": "support model",
+    },
+    {
+        "id": "backlog-defined",
+        "description": "Defines a 90-day backlog",
+        "check": "must_include",
+        "value": "90-day backlog",
+    },
+    {
+        "id": "min-length",
+        "description": "Production Handover Pack is substantive, not a one-liner",
+        "check": "min_length",
+        "value": 300,
+    },
+]
+
+_STAGE_21 = {
+    "persona": _STAGE_21_PERSONA,
+    "compliance_checklist": _STAGE_21_COMPLIANCE_CHECKLIST,
+}
+
 GLOBAL_RETAIL_STAGES: list[dict] = [
     _STAGE_0,
     _STAGE_1,
@@ -1606,4 +1677,5 @@ GLOBAL_RETAIL_STAGES: list[dict] = [
     _STAGE_18,
     _STAGE_19,
     _STAGE_20,
+    _STAGE_21,
 ]
