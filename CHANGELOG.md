@@ -161,3 +161,7 @@ One line per merged story (see `AGENT-WORKFLOW.md`).
   `ScenarioInstance` stages, approval-triggered (not time-triggered) unlock,
   additive cross-stage context. Foundation for the 22-stage FDE Engagement
   Framework content stories (FDE-018+).
+- FDE-018: GlobalRetail engagement, Stage 0 (Mission Briefing) — first
+  stage-content story on FDE-017's primitive. Onboarding persona + brief
+  compliance checklist, `POST /engagements/global-retail` convenience
+  launcher.
