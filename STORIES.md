@@ -27,6 +27,7 @@ file's own `Status` field; keep this table in sync when a story moves.
 | FDE-017 | Engagement sequencing primitive | P0 | FDE-001, FDE-002, FDE-007 | Done |
 | FDE-018 | GlobalRetail engagement — Stage 0 (Mission Briefing) | P1 | FDE-004, FDE-017 | Done |
 | FDE-019 | GlobalRetail engagement — Stage 1 (Discovery & Problem Framing) | P1 | FDE-004, FDE-017, FDE-018 | Done |
+| FDE-020 | GlobalRetail engagement — Stage 2 (Current-State Assessment) | P1 | FDE-004, FDE-005, FDE-017, FDE-019 | Done |
 
 ## Pick-up order
 

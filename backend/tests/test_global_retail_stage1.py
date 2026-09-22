@@ -57,10 +57,13 @@ def test_missing_a_customer_definition_fails_stage_1_checklist():
     assert any(f["rule_id"] == "customer-definition-shopper" for f in failures)
 
 
-def test_launching_global_retail_engagement_now_yields_two_stages(client):
+def test_launching_global_retail_engagement_includes_stage_1_locked(client):
+    """Stage count grows as later stage-content stories append to
+    GLOBAL_RETAIL_STAGES -- assert on stage 1 specifically, not the total,
+    so this test doesn't need updating every time a new stage lands."""
     payload = {"cohort_id": str(uuid.uuid4()), "student_id": str(uuid.uuid4())}
     engagement = client.post("/engagements/global-retail", json=payload).json()
 
-    assert len(engagement["stages"]) == 2
+    assert len(engagement["stages"]) >= 2
     assert engagement["stages"][0]["status"] == "active"
     assert engagement["stages"][1]["status"] == "not_started"
