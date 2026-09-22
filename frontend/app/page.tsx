@@ -34,7 +34,10 @@ export default function HomePage() {
             <p>
               Students arrive at their scenario instance from a link in their course. There&apos;s no
               separate login — if you have an instance URL, open{" "}
-              <code>/workspace/&lt;instanceId&gt;</code> directly.
+              <code>/workspace/&lt;instanceId&gt;</code> directly. A multi-stage engagement (e.g. the
+              22-stage FDE Engagement Framework) instead uses{" "}
+              <code>/engagement/&lt;engagementId&gt;</code>, which shows every stage&apos;s status
+              alongside the current one.
             </p>
           </div>
 

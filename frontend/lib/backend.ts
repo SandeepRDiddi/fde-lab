@@ -2,6 +2,7 @@ import type {
   ApprovalStatus,
   ConversationRead,
   DatasetPreview,
+  Engagement,
   GeneratedScenarioConfig,
   Message,
   QueryRunResult,
@@ -182,4 +183,21 @@ export async function decideSubmission(
     body: JSON.stringify({ decision }),
   });
   return asJson<SubmissionDetail>(res);
+}
+
+/** FDE-017/FDE-041: an engagement's full stage chain + accumulated context. */
+export async function getEngagement(engagementId: string): Promise<Engagement> {
+  const res = await fetch(`${BACKEND_URL}/engagements/${engagementId}`, { cache: "no-store" });
+  return asJson<Engagement>(res);
+}
+
+/** FDE-018/FDE-041: launches the GlobalRetail worked-example engagement for
+ * one student -- the instructor console's one-click launcher. */
+export async function createGlobalRetailEngagement(cohortId: string, studentId: string): Promise<Engagement> {
+  const res = await fetch(`${BACKEND_URL}/engagements/global-retail`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ cohort_id: cohortId, student_id: studentId }),
+  });
+  return asJson<Engagement>(res);
 }
