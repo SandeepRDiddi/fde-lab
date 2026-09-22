@@ -28,10 +28,18 @@ Instructor console ┘         │
 
 ### Frontend — single Next.js app, role-gated
 Students and instructors share one app, gated by role:
-- **Student view**: scenario workspace — AI-persona chat, incoming artifact/ticket
-  feed, data explorer for the synthetic dataset, submission panel.
+- **Student view**: scenario workspace (`/workspace/<instanceId>`) — AI-persona
+  chat, incoming artifact/ticket feed, data explorer for the synthetic dataset,
+  submission panel. A multi-stage `Engagement` (FDE-017/FDE-041) instead uses
+  `/engagement/<engagementId>`: a stage-status sidebar (locked/active/approved/
+  needs resubmission) alongside the same workspace components, rendered for
+  whichever stage the URL's `?stage=` param (or the frontier — the last
+  non-locked stage) selects. A "Refresh" button (`router.refresh()`) is how a
+  student sees a newly-unlocked stage without waiting on a full reload.
 - **Instructor view**: cohort configuration, scenario scheduling, live progress
-  monitoring across the cohort.
+  monitoring across the cohort, one-click GlobalRetail engagement launch
+  (FDE-041 — `POST /engagements/global-retail`, hands back the `/engagement/<id>`
+  link to give the student).
 
 ### LTI launch service — LMS entry point
 Added in Phase 3 (see `ROADMAP.md`). Handles the LTI 1.3 launch handshake (OIDC-based)

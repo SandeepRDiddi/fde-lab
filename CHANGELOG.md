@@ -241,3 +241,7 @@ One line per merged story (see `AGENT-WORKFLOW.md`).
   /engagements/global-retail`, then all 22 stages submitted and approved
   in order) proving the whole engagement completes for real, not just
   in pieces.
+- FDE-041: Engagement workspace UI — `/engagement/<id>` (stage-status
+  sidebar + reused workspace components) and an instructor one-click
+  GlobalRetail launcher, closing the gap the FDE-017–040 arc left (backend
+  and content only, no frontend). Verified live in a real browser.

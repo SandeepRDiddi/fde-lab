@@ -11,6 +11,7 @@ import {
   X,
 } from "lucide-react";
 import AppShell from "./AppShell";
+import EngagementLauncher from "./EngagementLauncher";
 import ScenarioGenerator from "./ScenarioGenerator";
 import type { ApprovalStatus, ScenarioInstance, SubmissionDetail } from "../lib/types";
 
@@ -149,6 +150,8 @@ export default function InstructorConsole({
         </div>
 
         <ScenarioGenerator cohortId={cohortId} onCreated={refresh} />
+
+        <EngagementLauncher cohortId={cohortId} />
 
         <section className="card">
           <div className="card-header">

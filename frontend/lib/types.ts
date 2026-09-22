@@ -91,6 +91,28 @@ export interface ScenarioInstance {
   approval_outcome: ApprovalStatus | null;
   approval_decided_at: string | null;
   created_at: string;
+  // FDE-017: set only when this instance is one stage of a multi-stage
+  // Engagement rather than a standalone scenario -- both null together for
+  // a standalone instance.
+  engagement_id: string | null;
+  stage_order: number | null;
+}
+
+export type EngagementStatus = "active" | "completed";
+
+// FDE-017: a chain of ordered ScenarioInstance stages that together form
+// one continuous, multi-stage engagement. `context` accumulates each
+// approved stage's output (keyed by stage order as a string), merged into
+// the next stage's config["engagement_context"] on advance.
+export interface Engagement {
+  id: string;
+  cohort_id: string;
+  student_id: string;
+  status: EngagementStatus;
+  context: Record<string, { submission_content: string | null; grading_result: unknown }>;
+  created_at: string;
+  completed_at: string | null;
+  stages: ScenarioInstance[];
 }
 
 export type MessageRole = "student" | "persona";

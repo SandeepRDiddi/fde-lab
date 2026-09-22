@@ -48,6 +48,7 @@ file's own `Status` field; keep this table in sync when a story moves.
 | FDE-038 | GlobalRetail engagement — Stage 19 (Change Request) | P1 | FDE-004, FDE-017, FDE-027, FDE-037 | Done |
 | FDE-039 | GlobalRetail engagement — Stage 20 (Executive Demonstration) | P1 | FDE-004, FDE-017, FDE-038 | Done |
 | FDE-040 | GlobalRetail engagement — Stage 21 (Handover & Adoption) | P1 | FDE-004, FDE-017, FDE-023, FDE-039 | Done |
+| FDE-041 | Engagement workspace UI | P1 | FDE-008, FDE-009, FDE-017 | Done |
 
 ## Pick-up order
 
