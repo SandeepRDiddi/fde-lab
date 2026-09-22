@@ -414,10 +414,89 @@ _STAGE_4 = {
     "compliance_checklist": _STAGE_4_COMPLIANCE_CHECKLIST,
 }
 
+
+# --- Stage 5: Solution Framing (Mission 2: Architect, first stage) --------
+#
+# First stage to actually depend on FDE-023's fix: Stage 4's approved AI
+# Readiness Matrix reaches this persona automatically via
+# config["engagement_context"] at conversation time (persona-service),
+# so the persona can treat "your classification from last stage" as
+# established fact without this stage's own content restating it.
+
+_STAGE_5_PERSONA = {
+    "system_prompt": (
+        "You are Marcus Chen, GlobalRetail Corp's VP of Engineering -- the "
+        "person this FDE reports to for the engagement. Three vendors "
+        "already pitched solutions here and none of them shipped. You want "
+        "a real architecture decision this time, grounded in the AI "
+        "readiness classification the FDE already produced, not another "
+        "pitch.\n\n"
+        "Reveal each of the following ONLY when specifically asked:\n"
+        "- If asked about prior vendor attempts: three were tried and "
+        "abandoned -- a basic chatbot (too limited, couldn't do "
+        "multi-step investigation), a RAG search tool (fine for lookup but "
+        "no execution ability), and a 'fully autonomous agent for "
+        "everything' platform (rejected once someone pointed out it would "
+        "put an LLM in the return-eligibility decision, which legal "
+        "already ruled out).\n"
+        "- If asked about budget: the ceiling is $400,000 for this phase.\n"
+        "- If asked about timeline: 90 days to a working pilot.\n\n"
+        "If asked generally what you want, tell them to propose an "
+        "architecture per use case based on their own AI Readiness Matrix "
+        "-- not a single one-size-fits-all platform like the third failed "
+        "vendor pitched."
+    ),
+    "agenda": (
+        "Push the FDE toward a per-use-case architecture (RAG for "
+        "AI-assisted, an agentic workflow for agentic, nothing AI-driven "
+        "for return-eligibility) rather than one monolithic platform, "
+        "referencing their own prior AI Readiness Matrix."
+    ),
+}
+
+_STAGE_5_COMPLIANCE_CHECKLIST = [
+    {
+        "id": "chose-rag-for-investigation",
+        "description": "Chooses RAG for the AI-assisted use case (delay root-cause investigation)",
+        "check": "must_include",
+        "value": "RAG",
+    },
+    {
+        "id": "chose-agent-workflow-for-escalation",
+        "description": "Chooses an agentic workflow for the agentic use case (supplier escalation)",
+        "check": "must_include",
+        "value": "agentic workflow",
+    },
+    {
+        "id": "respects-budget",
+        "description": "Decision is framed against the budget constraint",
+        "check": "must_include",
+        "value": "budget",
+    },
+    {
+        "id": "excludes-return-eligibility",
+        "description": "Explicitly excludes return-eligibility from any AI architecture",
+        "check": "must_include",
+        "value": "return-eligibility",
+    },
+    {
+        "id": "min-length",
+        "description": "ADR set is substantive, not a one-liner",
+        "check": "min_length",
+        "value": 300,
+    },
+]
+
+_STAGE_5 = {
+    "persona": _STAGE_5_PERSONA,
+    "compliance_checklist": _STAGE_5_COMPLIANCE_CHECKLIST,
+}
+
 GLOBAL_RETAIL_STAGES: list[dict] = [
     _STAGE_0,
     _STAGE_1,
     _STAGE_2,
     _STAGE_3,
     _STAGE_4,
+    _STAGE_5,
 ]

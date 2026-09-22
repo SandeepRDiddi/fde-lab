@@ -31,6 +31,7 @@ file's own `Status` field; keep this table in sync when a story moves.
 | FDE-021 | GlobalRetail engagement — Stage 3 (Data & Knowledge Discovery) | P1 | FDE-003, FDE-004, FDE-013, FDE-017, FDE-020 | Done |
 | FDE-022 | GlobalRetail engagement — Stage 4 (AI Readiness Assessment) | P1 | FDE-004, FDE-017, FDE-021 | Done |
 | FDE-023 | Surface engagement context to the persona | P0 | FDE-004, FDE-017 | Done |
+| FDE-024 | GlobalRetail engagement — Stage 5 (Solution Framing) | P1 | FDE-004, FDE-017, FDE-022, FDE-023 | Done |
 
 ## Pick-up order
 
