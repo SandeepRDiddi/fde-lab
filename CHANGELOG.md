@@ -205,3 +205,6 @@ One line per merged story (see `AGENT-WORKFLOW.md`).
 - FDE-029: GlobalRetail engagement, Stage 10 (Agent Engineering) — closes
   out Mission 3 (Engineer, Stages 9-10); agent workflow design with a
   bounded retry limit fixing the injected runaway-retry incident.
+- FDE-030: GlobalRetail engagement, Stage 11 (Enterprise Controls) — opens
+  Mission 4 (Industrialize); PII finding lands in the same unindexed
+  supplier PDFs Stage 3 already flagged.

@@ -852,6 +852,86 @@ _STAGE_10 = {
     "compliance_checklist": _STAGE_10_COMPLIANCE_CHECKLIST,
 }
 
+
+# --- Stage 11: Enterprise Controls (Mission 4: Industrialize) --------------
+#
+# Persona is Jordan Lee (reused from Stages 1/4) now explicitly in the
+# security-review seat -- consistent with an IT Director plausibly
+# chairing it. PII finding lands in the same "half the supplier docs are
+# unindexed PDFs" gap Stage 3 already flagged; the blocked tool is
+# deliberately not named, since Stage 5's ADRs never named a specific
+# product either.
+
+_STAGE_11_PERSONA = {
+    "system_prompt": (
+        "You are Jordan Lee, GlobalRetail Corp's Director of IT, now "
+        "chairing security review for this engagement. Real customer and "
+        "operational data is involved, and departments don't fully trust "
+        "each other yet on access.\n\n"
+        "Reveal each of the following ONLY when specifically asked:\n"
+        "- If asked about roles/access: there are three tiers needing "
+        "different access -- frontline store associates, operations "
+        "staff, and executives -- and none of them should see the same "
+        "thing today.\n"
+        "- If asked about any PII or data quality issue found in "
+        "documents: one of the unindexed supplier contract PDFs (the ones "
+        "nobody had extracted structured data from, back when you first "
+        "looked at the data landscape) turns out to contain an employee's "
+        "personal details buried in it -- nobody flagged it before it got "
+        "pulled into retrieval.\n"
+        "- If asked about the escalation tool from the architecture work: "
+        "security is blocking the first-choice tool outright -- it "
+        "doesn't matter how it performs, it doesn't meet the access "
+        "control bar. They need an approved alternative, not an appeal.\n\n"
+        "If asked generally what's needed, tell them to propose RBAC "
+        "tiers, a PII redaction approach, and an approved alternative "
+        "tool, rather than listing the findings yourself."
+    ),
+    "agenda": (
+        "Get the FDE to propose RBAC across the three role tiers, PII "
+        "redaction covering documents like the supplier contract, and a "
+        "real approved alternative for the blocked escalation tool."
+    ),
+}
+
+_STAGE_11_COMPLIANCE_CHECKLIST = [
+    {
+        "id": "rbac-proposed",
+        "description": "Proposes RBAC across the role tiers",
+        "check": "must_include",
+        "value": "RBAC",
+    },
+    {
+        "id": "pii-redaction",
+        "description": "Addresses PII redaction in retrieval",
+        "check": "must_include",
+        "value": "PII",
+    },
+    {
+        "id": "supplier-contract-finding",
+        "description": "References the specific supplier-contract PII finding",
+        "check": "must_include",
+        "value": "supplier contract",
+    },
+    {
+        "id": "approved-alternative",
+        "description": "Proposes an approved alternative tool for the blocked escalation workflow",
+        "check": "must_include",
+        "value": "approved alternative",
+    },
+    {
+        "id": "min-length",
+        "description": "Security Control Matrix writeup is substantive, not a one-liner",
+        "check": "min_length",
+        "value": 300,
+    },
+]
+
+_STAGE_11 = {
+    "persona": _STAGE_11_PERSONA,
+    "compliance_checklist": _STAGE_11_COMPLIANCE_CHECKLIST,
+}
+
 GLOBAL_RETAIL_STAGES: list[dict] = [
     _STAGE_0,
     _STAGE_1,
@@ -864,4 +944,5 @@ GLOBAL_RETAIL_STAGES: list[dict] = [
     _STAGE_8,
     _STAGE_9,
     _STAGE_10,
+    _STAGE_11,
 ]

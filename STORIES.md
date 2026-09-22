@@ -37,6 +37,7 @@ file's own `Status` field; keep this table in sync when a story moves.
 | FDE-027 | GlobalRetail engagement — Stage 8 (Data Contracts & Integration) | P1 | FDE-004, FDE-017, FDE-026 | Done |
 | FDE-028 | GlobalRetail engagement — Stage 9 (Build the AI Capability) | P1 | FDE-004, FDE-017, FDE-027 | Done |
 | FDE-029 | GlobalRetail engagement — Stage 10 (Agent Engineering) | P1 | FDE-004, FDE-017, FDE-028 | Done |
+| FDE-030 | GlobalRetail engagement — Stage 11 (Enterprise Controls) | P1 | FDE-004, FDE-017, FDE-021, FDE-029 | Done |
 
 ## Pick-up order
 
