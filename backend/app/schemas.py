@@ -5,7 +5,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
-from app.models import ApprovalStatus, ScenarioStatus
+from app.models import ApprovalStatus, EngagementStatus, ScenarioStatus
 
 
 class ScenarioInstanceCreate(BaseModel):
@@ -31,7 +31,43 @@ class ScenarioInstanceRead(BaseModel):
     notified_at: datetime | None
     approval_outcome: ApprovalStatus | None
     approval_decided_at: datetime | None
+    engagement_id: uuid.UUID | None
+    stage_order: int | None
     created_at: datetime
+
+
+class EngagementStageCreate(BaseModel):
+    """One stage's initial config within a new engagement (FDE-017 AC1) --
+    same shape as ScenarioInstanceCreate.config, just without its own
+    cohort_id/student_id since those come from the parent engagement."""
+
+    config: dict = {}
+
+
+class EngagementCreate(BaseModel):
+    cohort_id: uuid.UUID
+    student_id: uuid.UUID
+    stages: list[EngagementStageCreate]
+
+    @field_validator("stages")
+    @classmethod
+    def _require_at_least_one_stage(cls, value: list[EngagementStageCreate]) -> list[EngagementStageCreate]:
+        if not value:
+            raise ValueError("an engagement needs at least one stage")
+        return value
+
+
+class EngagementRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    cohort_id: uuid.UUID
+    student_id: uuid.UUID
+    status: EngagementStatus
+    context: dict
+    created_at: datetime
+    completed_at: datetime | None
+    stages: list[ScenarioInstanceRead]
 
 
 class ScenarioInstanceDatasetUpdate(BaseModel):
