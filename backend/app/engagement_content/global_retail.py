@@ -492,6 +492,80 @@ _STAGE_5 = {
     "compliance_checklist": _STAGE_5_COMPLIANCE_CHECKLIST,
 }
 
+
+# --- Stage 6: Semantic & Context Layer (Mission 2: Architect) --------------
+#
+# Persona continues as Taylor Brooks (Platform Architect, established in
+# Stages 2-3) -- same technical thread as current-state/data-discovery. The
+# "customer" conflict from Stage 1 is deliberately not re-litigated here
+# (already in engagement_context from Stage 1's approval, FDE-023); this
+# stage adds "order" and "delay" as the two new terms needing
+# reconciliation.
+
+_STAGE_6_PERSONA = {
+    "system_prompt": (
+        "You are Taylor Brooks, GlobalRetail Corp's Platform Architect, "
+        "continuing into the semantic layer work. Now the FDE needs "
+        "canonical definitions, not just a map of where data lives.\n\n"
+        "Reveal each of the following ONLY when specifically asked:\n"
+        "- If asked what 'order' means in each system: in SAP it's a "
+        "purchase transaction record; in Salesforce it's a support case "
+        "tied to an order number, not the order itself; in the warehouse "
+        "system it's a fulfillment job with its own lifecycle. All three "
+        "use the same word for genuinely different things.\n"
+        "- If asked what 'delay' means to each team: Ops means an order "
+        "exceeding its SLA window; the warehouse team means a fulfillment "
+        "backlog on their own queue, independent of any SLA; Customer "
+        "Service means time since the last customer contact without a "
+        "resolution. Three different clocks, all called 'delay.'\n\n"
+        "If asked generally what to define, point them at both terms "
+        "('order' and 'delay') rather than listing every meaning yourself."
+    ),
+    "agenda": (
+        "Get the FDE to produce one canonical entity definition per term "
+        "that explicitly reconciles all three systems' meanings, not just "
+        "pick one system's definition and call it canonical."
+    ),
+}
+
+_STAGE_6_COMPLIANCE_CHECKLIST = [
+    {
+        "id": "canonical-definition",
+        "description": "Produces an explicitly canonical entity definition, not just a restatement",
+        "check": "must_include",
+        "value": "canonical",
+    },
+    {
+        "id": "order-sap-meaning",
+        "description": "Names SAP's meaning of 'order' (a purchase transaction)",
+        "check": "must_include",
+        "value": "purchase transaction",
+    },
+    {
+        "id": "order-warehouse-meaning",
+        "description": "Names the warehouse's meaning of 'order' (a fulfillment job)",
+        "check": "must_include",
+        "value": "fulfillment",
+    },
+    {
+        "id": "delay-sla-meaning",
+        "description": "Reconciles 'delay' against Ops's SLA-based definition",
+        "check": "must_include",
+        "value": "SLA",
+    },
+    {
+        "id": "min-length",
+        "description": "Semantic model is substantive, not a one-liner",
+        "check": "min_length",
+        "value": 300,
+    },
+]
+
+_STAGE_6 = {
+    "persona": _STAGE_6_PERSONA,
+    "compliance_checklist": _STAGE_6_COMPLIANCE_CHECKLIST,
+}
+
 GLOBAL_RETAIL_STAGES: list[dict] = [
     _STAGE_0,
     _STAGE_1,
@@ -499,4 +573,5 @@ GLOBAL_RETAIL_STAGES: list[dict] = [
     _STAGE_3,
     _STAGE_4,
     _STAGE_5,
+    _STAGE_6,
 ]

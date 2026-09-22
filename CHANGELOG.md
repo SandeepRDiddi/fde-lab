@@ -188,3 +188,6 @@ One line per merged story (see `AGENT-WORKFLOW.md`).
 - FDE-024: GlobalRetail engagement, Stage 5 (Solution Framing) — opens
   Mission 2 (Architect); first stage-content story to actually exercise
   FDE-023's cross-stage context fix.
+- FDE-025: GlobalRetail engagement, Stage 6 (Semantic & Context Layer) —
+  canonical "order"/"delay" definitions reconciling three systems' meanings
+  of each.
