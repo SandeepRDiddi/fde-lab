@@ -198,3 +198,7 @@ One line per merged story (see `AGENT-WORKFLOW.md`).
 - FDE-027: GlobalRetail engagement, Stage 8 (Data Contracts & Integration)
   — closes out Mission 2 (Architect, Stages 5-8); data contract fixes the
   same schema-drifting warehouse integration Stage 2 already diagnosed.
+- FDE-028: GlobalRetail engagement, Stage 9 (Build the AI Capability) —
+  opens Mission 3 (Engineer); both injected failure modes are
+  persona-narrated since this repo has no RAG service and the legacy-api
+  mock has no 500 scenario built.

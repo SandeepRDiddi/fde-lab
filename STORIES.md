@@ -35,6 +35,7 @@ file's own `Status` field; keep this table in sync when a story moves.
 | FDE-025 | GlobalRetail engagement — Stage 6 (Semantic & Context Layer) | P1 | FDE-004, FDE-017, FDE-021, FDE-024 | Done |
 | FDE-026 | GlobalRetail engagement — Stage 7 (Enterprise Architecture) | P1 | FDE-004, FDE-017, FDE-025 | Done |
 | FDE-027 | GlobalRetail engagement — Stage 8 (Data Contracts & Integration) | P1 | FDE-004, FDE-017, FDE-026 | Done |
+| FDE-028 | GlobalRetail engagement — Stage 9 (Build the AI Capability) | P1 | FDE-004, FDE-017, FDE-027 | Done |
 
 ## Pick-up order
 
