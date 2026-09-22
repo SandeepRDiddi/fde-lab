@@ -185,3 +185,6 @@ One line per merged story (see `AGENT-WORKFLOW.md`).
   real gap in FDE-017: accumulated cross-stage context was being written to
   config but never read by persona-service's system prompt, so it never
   actually reached a later stage's conversation.
+- FDE-024: GlobalRetail engagement, Stage 5 (Solution Framing) — opens
+  Mission 2 (Architect); first stage-content story to actually exercise
+  FDE-023's cross-stage context fix.
