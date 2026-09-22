@@ -1080,6 +1080,86 @@ _STAGE_13 = {
     "compliance_checklist": _STAGE_13_COMPLIANCE_CHECKLIST,
 }
 
+
+# --- Stage 14: Evaluation & Testing (Mission 4: Industrialize) -------------
+#
+# Persona is Jordan Lee (Stages 1/4/11), supplying the adversarial-prompts
+# half of the assets -- a natural extension of the security-review role
+# established in Stage 11.
+
+_STAGE_14_PERSONA = {
+    "system_prompt": (
+        "You are Jordan Lee, GlobalRetail Corp's Director of IT. "
+        "\"It answered my question correctly once\" is not something "
+        "you'll accept as evidence this is ready.\n\n"
+        "Reveal each of the following ONLY when specifically asked:\n"
+        "- If asked about test data: there's a held-out set of real, "
+        "anonymized support tickets to evaluate against -- not synthetic "
+        "questions the FDE wrote themselves.\n"
+        "- If asked about adversarial testing or security's role: "
+        "security has supplied a set of adversarial prompts specifically "
+        "meant to probe the platform's weak points -- prompt injection, "
+        "attempts to extract data outside a user's access, that kind of "
+        "thing.\n"
+        "- If asked what 'ready' actually means: ready for 1,200 stores' "
+        "worth of concurrent, messy questions -- not one clean demo query "
+        "answered correctly once.\n\n"
+        "If asked generally what's needed, tell them evaluation coverage "
+        "needs to span more than just 'does it usually work,' rather than "
+        "listing every category yourself."
+    ),
+    "agenda": (
+        "Push the FDE to build real evaluation coverage -- functional, "
+        "agent-behavior, RAG-accuracy, adversarial/security, and "
+        "regression -- against the held-out tickets and security's "
+        "adversarial prompts, not a one-off vibe check."
+    ),
+}
+
+_STAGE_14_COMPLIANCE_CHECKLIST = [
+    {
+        "id": "functional-eval",
+        "description": "Names functional evaluation",
+        "check": "must_include",
+        "value": "functional",
+    },
+    {
+        "id": "agent-behavior-eval",
+        "description": "Names agent-behavior evaluation",
+        "check": "must_include",
+        "value": "agent-behavior",
+    },
+    {
+        "id": "rag-accuracy-eval",
+        "description": "Names RAG-accuracy evaluation",
+        "check": "must_include",
+        "value": "RAG-accuracy",
+    },
+    {
+        "id": "adversarial-security-eval",
+        "description": "Names adversarial/security evaluation",
+        "check": "must_include",
+        "value": "adversarial",
+    },
+    {
+        "id": "regression-eval",
+        "description": "Names regression evaluation",
+        "check": "must_include",
+        "value": "regression",
+    },
+    {
+        "id": "min-length",
+        "description": "Evaluation Harness writeup is substantive, not a one-liner",
+        "check": "min_length",
+        "value": 300,
+    },
+]
+
+_STAGE_14 = {
+    "persona": _STAGE_14_PERSONA,
+    "compliance_checklist": _STAGE_14_COMPLIANCE_CHECKLIST,
+}
+
 GLOBAL_RETAIL_STAGES: list[dict] = [
     _STAGE_0,
     _STAGE_1,
@@ -1095,4 +1175,5 @@ GLOBAL_RETAIL_STAGES: list[dict] = [
     _STAGE_11,
     _STAGE_12,
     _STAGE_13,
+    _STAGE_14,
 ]

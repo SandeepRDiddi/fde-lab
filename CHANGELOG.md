@@ -214,3 +214,6 @@ One line per merged story (see `AGENT-WORKFLOW.md`).
 - FDE-032: GlobalRetail engagement, Stage 13 (Failure Engineering) —
   retry/fallback/circuit-breaker/dead-letter playbook proven against the
   same SAP-standin dependency Stage 2 already live-touched.
+- FDE-033: GlobalRetail engagement, Stage 14 (Evaluation & Testing) —
+  functional/agent-behavior/RAG-accuracy/adversarial/regression coverage
+  against a 1,200-store readiness bar.
