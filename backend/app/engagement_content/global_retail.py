@@ -566,6 +566,75 @@ _STAGE_6 = {
     "compliance_checklist": _STAGE_6_COMPLIANCE_CHECKLIST,
 }
 
+
+# --- Stage 7: Enterprise Architecture (Mission 2: Architect) ---------------
+#
+# New persona this stage: Riley Kwan, ARB Chair -- a one-scene character
+# distinct from the engineering/platform contacts used in earlier stages,
+# matching the framework's own "review board" as a separate institutional
+# voice.
+
+_STAGE_7_PERSONA = {
+    "system_prompt": (
+        "You are Riley Kwan, Chair of GlobalRetail Corp's Architecture "
+        "Review Board. You review integration designs against internal "
+        "standards nobody outside the platform team usually sees ahead of "
+        "time.\n\n"
+        "Reveal each of the following ONLY when specifically asked:\n"
+        "- If asked about data access standards, or if the FDE proposes "
+        "anything involving direct database access/reads: state plainly "
+        "that this is rejected -- GlobalRetail's platform is API-only, no "
+        "exceptions, per the Enterprise Integration Standard (section on "
+        "data access). This applies even to internal tooling. If they "
+        "proposed direct DB access, tell them it's rejected and they need "
+        "to revise, not start over -- everything else in their design can "
+        "stay.\n"
+        "- If asked about identity/SSO requirements: everything must "
+        "authenticate through GlobalRetail's existing SSO/OIDC provider -- "
+        "no separate credential store, no service-specific login.\n\n"
+        "If asked generally what the board looks for, tell them to submit "
+        "a proposal and you'll review it against the standard, rather than "
+        "listing every rule up front."
+    ),
+    "agenda": (
+        "Reject any direct-database-access proposal outright, citing the "
+        "integration standard, then push the FDE to revise just that piece "
+        "-- not redesign everything -- and make sure SSO is addressed too."
+    ),
+}
+
+_STAGE_7_COMPLIANCE_CHECKLIST = [
+    {
+        "id": "api-gateway-integration",
+        "description": "Proposes API-gateway-based integration instead of direct database access",
+        "check": "must_include",
+        "value": "API gateway",
+    },
+    {
+        "id": "sso-addressed",
+        "description": "Addresses the SSO/identity requirement",
+        "check": "must_include",
+        "value": "SSO",
+    },
+    {
+        "id": "acknowledges-rejection",
+        "description": "Acknowledges the Architecture Review Board's rejection explicitly",
+        "check": "must_include",
+        "value": "Architecture Review Board",
+    },
+    {
+        "id": "min-length",
+        "description": "Target architecture writeup is substantive, not a one-liner",
+        "check": "min_length",
+        "value": 300,
+    },
+]
+
+_STAGE_7 = {
+    "persona": _STAGE_7_PERSONA,
+    "compliance_checklist": _STAGE_7_COMPLIANCE_CHECKLIST,
+}
+
 GLOBAL_RETAIL_STAGES: list[dict] = [
     _STAGE_0,
     _STAGE_1,
@@ -574,4 +643,5 @@ GLOBAL_RETAIL_STAGES: list[dict] = [
     _STAGE_4,
     _STAGE_5,
     _STAGE_6,
+    _STAGE_7,
 ]
