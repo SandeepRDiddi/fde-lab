@@ -181,3 +181,7 @@ One line per merged story (see `AGENT-WORKFLOW.md`).
 - FDE-022: GlobalRetail engagement, Stage 4 (AI Readiness Assessment) —
   closes out Mission 1 (Discover, Stages 0-4), all gradable end to end via
   `POST /engagements/global-retail`.
+- FDE-023: Surface engagement context to the persona — found and fixed a
+  real gap in FDE-017: accumulated cross-stage context was being written to
+  config but never read by persona-service's system prompt, so it never
+  actually reached a later stage's conversation.

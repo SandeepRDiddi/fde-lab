@@ -16,14 +16,14 @@ from app.schemas import ConversationRead, MessageRead, PivotRequest, SendMessage
 router = APIRouter(prefix="/scenario-instances/{scenario_instance_id}", tags=["persona"])
 
 
-def _require_persona_config(db: Session, scenario_instance_id: uuid.UUID) -> dict:
+def _require_config(db: Session, scenario_instance_id: uuid.UUID) -> dict:
     config = get_scenario_config(db, scenario_instance_id)
     if config is None:
         raise HTTPException(status_code=404, detail="Scenario instance not found")
     persona = config.get("persona")
     if not persona or not persona.get("system_prompt"):
         raise HTTPException(status_code=400, detail="Scenario instance has no persona configured")
-    return persona
+    return config
 
 
 def _find_conversation(db: Session, scenario_instance_id: uuid.UUID, student_id: uuid.UUID) -> Conversation | None:
@@ -54,11 +54,32 @@ def _get_or_create_conversation(db: Session, scenario_instance_id: uuid.UUID, st
     return conversation
 
 
-def _build_system_prompt(persona: dict) -> str:
+def _build_system_prompt(config: dict) -> str:
+    persona = config["persona"]
     system_prompt = persona["system_prompt"]
     agenda = persona.get("agenda")
     if agenda:
         system_prompt = f"{system_prompt}\n\nCurrent agenda: {agenda}"
+
+    # FDE-017: config["engagement_context"] accumulates prior stages'
+    # approved output (keyed by stage order, as a string). Rendered here so
+    # a later stage's persona actually knows what the student produced
+    # earlier in the same engagement -- without this, FDE-017's carried
+    # context sits inert in the database and never reaches the model.
+    engagement_context = config.get("engagement_context")
+    if engagement_context:
+        lines = []
+        for stage_order in sorted(engagement_context, key=int):
+            content = engagement_context[stage_order].get("submission_content")
+            if content:
+                lines.append(f"Stage {stage_order}: {content}")
+        if lines:
+            system_prompt = (
+                f"{system_prompt}\n\n"
+                "Context from earlier stages of this engagement (what the "
+                "student already produced -- treat as established fact, "
+                "don't ask them to repeat it):\n" + "\n".join(lines)
+            )
     return system_prompt
 
 
@@ -69,10 +90,11 @@ def send_message(
     db: Session = Depends(get_db),
     gateway: PromptOpsGatewayClient = Depends(get_gateway_client),
 ) -> MessageRead:
-    # Re-read the persona config on every turn (rather than caching it on the
-    # conversation) so a mid-engagement pivot is picked up immediately, without
-    # restarting the conversation (FDE-004 AC4).
-    persona = _require_persona_config(db, scenario_instance_id)
+    # Re-read the full config on every turn (rather than caching it on the
+    # conversation) so a mid-engagement pivot -- or the engagement advancing
+    # to a new stage's context -- is picked up immediately, without
+    # restarting the conversation (FDE-004 AC4, FDE-017/FDE-023).
+    config = _require_config(db, scenario_instance_id)
     conversation = _get_or_create_conversation(db, scenario_instance_id, payload.student_id)
 
     student_message = Message(conversation_id=conversation.id, role=MessageRole.student, content=payload.message)
@@ -87,7 +109,7 @@ def send_message(
         {"role": "user" if m.role == MessageRole.student else "assistant", "content": m.content} for m in history
     ]
     try:
-        reply_text = gateway.complete(system_prompt=_build_system_prompt(persona), messages=gateway_messages)
+        reply_text = gateway.complete(system_prompt=_build_system_prompt(config), messages=gateway_messages)
     except GatewayError as exc:
         # Roll back the flushed-but-uncommitted student message too -- a
         # message with no persona reply is a confusing half-turn, not a
