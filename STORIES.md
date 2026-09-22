@@ -46,6 +46,7 @@ file's own `Status` field; keep this table in sync when a story moves.
 | FDE-036 | GlobalRetail engagement — Stage 17 (Production Deployment) | P1 | FDE-004, FDE-017, FDE-035 | Done |
 | FDE-037 | GlobalRetail engagement — Stage 18 (Incident Simulation) | P1 | FDE-004, FDE-017, FDE-031, FDE-036 | Done |
 | FDE-038 | GlobalRetail engagement — Stage 19 (Change Request) | P1 | FDE-004, FDE-017, FDE-027, FDE-037 | Done |
+| FDE-039 | GlobalRetail engagement — Stage 20 (Executive Demonstration) | P1 | FDE-004, FDE-017, FDE-038 | Done |
 
 ## Pick-up order
 

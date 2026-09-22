@@ -233,3 +233,6 @@ One line per merged story (see `AGENT-WORKFLOW.md`).
   Mission 5 (Operate Under Pressure, Stages 17-19); Stage 8's data contract
   survives a live schema break, competing capability ask triaged
   separately.
+- FDE-039: GlobalRetail engagement, Stage 20 (Executive Demonstration) —
+  opens Mission 6 (Deliver the Outcome); one demo, two audiences (CIO +
+  Ops), plus a last-minute feature ask priced live.

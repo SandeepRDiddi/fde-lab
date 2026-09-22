@@ -1506,6 +1506,84 @@ _STAGE_19 = {
     "compliance_checklist": _STAGE_19_COMPLIANCE_CHECKLIST,
 }
 
+
+# --- Stage 20: Executive Demonstration (Mission 6: Deliver the Outcome) ---
+#
+# New one-scene persona: Elena Vasquez, CIO -- the primary audience in the
+# room, relaying Priya Anand's (VP Ops, Stages 1/18) separate ask the way
+# Stage 1 had one persona relay multiple stakeholders' positions.
+
+_STAGE_20_PERSONA = {
+    "system_prompt": (
+        "You are Elena Vasquez, GlobalRetail Corp's CIO. You have ten "
+        "minutes, and you're not the only audience in the room.\n\n"
+        "Reveal each of the following ONLY when specifically asked:\n"
+        "- If asked what you personally want from the demo: architecture "
+        "and risk -- you want to know this is built solidly and what "
+        "could go wrong.\n"
+        "- If asked who else will be there, or what Priya Anand (VP of "
+        "Operations) wants: she'll be in the same ten minutes and cares "
+        "about store-level impact -- what this actually changes for "
+        "associates day to day, not the architecture diagram.\n"
+        "- If asked about anything that changed recently: the customer "
+        "asked for a new feature just three hours before this demo. "
+        "You want to know, live, what that actually costs -- not a "
+        "promise to look into it later.\n\n"
+        "If asked generally what to prepare, tell them the demo has to "
+        "land with both audiences in the same ten minutes, rather than "
+        "listing every requirement yourself."
+    ),
+    "agenda": (
+        "Push the FDE to cover architecture, risk, and ROI for the CIO, "
+        "store-level impact for Priya Anand, and price the last-minute "
+        "feature ask live -- all in one demo, not separate pitches."
+    ),
+}
+
+_STAGE_20_COMPLIANCE_CHECKLIST = [
+    {
+        "id": "architecture-covered",
+        "description": "Covers architecture for the CIO audience",
+        "check": "must_include",
+        "value": "architecture",
+    },
+    {
+        "id": "risk-covered",
+        "description": "Covers risk for the CIO audience",
+        "check": "must_include",
+        "value": "risk",
+    },
+    {
+        "id": "roi-covered",
+        "description": "Covers ROI",
+        "check": "must_include",
+        "value": "ROI",
+    },
+    {
+        "id": "store-level-impact-covered",
+        "description": "Covers store-level impact for the Ops audience",
+        "check": "must_include",
+        "value": "store-level impact",
+    },
+    {
+        "id": "last-minute-cost-priced",
+        "description": "Prices the cost of the last-minute feature ask",
+        "check": "must_include",
+        "value": "cost",
+    },
+    {
+        "id": "min-length",
+        "description": "Executive Demo writeup is substantive, not a one-liner",
+        "check": "min_length",
+        "value": 300,
+    },
+]
+
+_STAGE_20 = {
+    "persona": _STAGE_20_PERSONA,
+    "compliance_checklist": _STAGE_20_COMPLIANCE_CHECKLIST,
+}
+
 GLOBAL_RETAIL_STAGES: list[dict] = [
     _STAGE_0,
     _STAGE_1,
@@ -1527,4 +1605,5 @@ GLOBAL_RETAIL_STAGES: list[dict] = [
     _STAGE_17,
     _STAGE_18,
     _STAGE_19,
+    _STAGE_20,
 ]
