@@ -223,3 +223,6 @@ One line per merged story (see `AGENT-WORKFLOW.md`).
 - FDE-035: GlobalRetail engagement, Stage 16 (DevSecOps / AIDLC) — closes
   out Mission 4 (Industrialize, Stages 11-16); automated pipeline gate
   wiring the Stage 14 evaluation harness in for real.
+- FDE-036: GlobalRetail engagement, Stage 17 (Production Deployment) —
+  opens Mission 5 (Operate Under Pressure); containerized deploy through
+  the real Stage 16 pipeline, not a manual step.
