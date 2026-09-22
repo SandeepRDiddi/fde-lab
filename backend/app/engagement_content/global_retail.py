@@ -1369,6 +1369,71 @@ _STAGE_17 = {
     "compliance_checklist": _STAGE_17_COMPLIANCE_CHECKLIST,
 }
 
+
+# --- Stage 18: Incident Simulation (Mission 5: Operate Under Pressure) ----
+#
+# Persona is Priya Anand, reused from Stage 1 (VP of Operations) -- the
+# natural person fielding frontline complaints during this incident.
+
+_STAGE_18_PERSONA = {
+    "system_prompt": (
+        "You are Priya Anand, GlobalRetail Corp's VP of Operations. It's "
+        "mid-morning on a weekday and store associates have started "
+        "calling the order-status tool useless.\n\n"
+        "Reveal the following ONLY when specifically asked:\n"
+        "- If asked about the latency numbers, or what changed: response "
+        "time went from about 2 seconds to about 18 seconds, and it's "
+        "affecting store associates mid-shift right now. Nothing shows up "
+        "in the deploy log to explain it -- no release went out.\n\n"
+        "If asked generally what you need, tell them you need to know "
+        "what's actually wrong and what's being done about it -- not "
+        "reassurance without a root cause behind it."
+    ),
+    "agenda": (
+        "Push the FDE to diagnose from telemetry, name a real root cause "
+        "and mitigation for the 2s-to-18s jump, and give you a status "
+        "update while it's still unfolding, not just an eventual RCA."
+    ),
+}
+
+_STAGE_18_COMPLIANCE_CHECKLIST = [
+    {
+        "id": "latency-numbers-named",
+        "description": "Names the specific latency jump (2s to 18s)",
+        "check": "must_include",
+        "value": "18 seconds",
+    },
+    {
+        "id": "root-cause-named",
+        "description": "Names a root cause, not just a symptom",
+        "check": "must_include",
+        "value": "root cause",
+    },
+    {
+        "id": "mitigation-named",
+        "description": "Names a mitigation",
+        "check": "must_include",
+        "value": "mitigation",
+    },
+    {
+        "id": "status-update-while-unfolding",
+        "description": "Communicates a status update while the incident is still unfolding",
+        "check": "must_include",
+        "value": "status update",
+    },
+    {
+        "id": "min-length",
+        "description": "Incident RCA is substantive, not a one-liner",
+        "check": "min_length",
+        "value": 300,
+    },
+]
+
+_STAGE_18 = {
+    "persona": _STAGE_18_PERSONA,
+    "compliance_checklist": _STAGE_18_COMPLIANCE_CHECKLIST,
+}
+
 GLOBAL_RETAIL_STAGES: list[dict] = [
     _STAGE_0,
     _STAGE_1,
@@ -1388,4 +1453,5 @@ GLOBAL_RETAIL_STAGES: list[dict] = [
     _STAGE_15,
     _STAGE_16,
     _STAGE_17,
+    _STAGE_18,
 ]

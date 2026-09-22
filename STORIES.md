@@ -44,6 +44,7 @@ file's own `Status` field; keep this table in sync when a story moves.
 | FDE-034 | GlobalRetail engagement — Stage 15 (FinOps / Token Economics) | P1 | FDE-004, FDE-017, FDE-033 | Done |
 | FDE-035 | GlobalRetail engagement — Stage 16 (DevSecOps / AIDLC) | P1 | FDE-004, FDE-017, FDE-033, FDE-034 | Done |
 | FDE-036 | GlobalRetail engagement — Stage 17 (Production Deployment) | P1 | FDE-004, FDE-017, FDE-035 | Done |
+| FDE-037 | GlobalRetail engagement — Stage 18 (Incident Simulation) | P1 | FDE-004, FDE-017, FDE-031, FDE-036 | Done |
 
 ## Pick-up order
 

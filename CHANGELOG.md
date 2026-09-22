@@ -226,3 +226,6 @@ One line per merged story (see `AGENT-WORKFLOW.md`).
 - FDE-036: GlobalRetail engagement, Stage 17 (Production Deployment) —
   opens Mission 5 (Operate Under Pressure); containerized deploy through
   the real Stage 16 pipeline, not a manual step.
+- FDE-037: GlobalRetail engagement, Stage 18 (Incident Simulation) — RCA
+  for a 2s-to-18s latency spike with no matching deploy, communicated
+  while still unfolding.
