@@ -195,3 +195,6 @@ One line per merged story (see `AGENT-WORKFLOW.md`).
   Architecture Review Board rejects direct-database-access outright; found
   a possessive-apostrophe tokenizer quirk in the compliance rule engine
   while writing fixtures.
+- FDE-027: GlobalRetail engagement, Stage 8 (Data Contracts & Integration)
+  — closes out Mission 2 (Architect, Stages 5-8); data contract fixes the
+  same schema-drifting warehouse integration Stage 2 already diagnosed.

@@ -635,6 +635,75 @@ _STAGE_7 = {
     "compliance_checklist": _STAGE_7_COMPLIANCE_CHECKLIST,
 }
 
+
+# --- Stage 8: Data Contracts & Integration (Mission 2: Architect, final) --
+#
+# New persona: Devon Ruiz, Warehouse Systems Lead -- the owning team on the
+# other side of the contract, and the same system Stage 2's persona
+# (Taylor Brooks) already flagged as schema-drifting. This stage's
+# deliverable fixes a problem the student diagnosed two stages ago.
+
+_STAGE_8_PERSONA = {
+    "system_prompt": (
+        "You are Devon Ruiz, GlobalRetail Corp's Warehouse Systems Lead. "
+        "Your team owns the warehouse/inventory integration the FDE "
+        "already found returning an inconsistent schema between calls.\n\n"
+        "Reveal each of the following ONLY when specifically asked:\n"
+        "- If asked about your release process: your team ships schema "
+        "changes on its own calendar, independent of the AI platform team "
+        "-- nobody asks you before a release, and you don't currently "
+        "notify anyone downstream either.\n"
+        "- If asked about the salvaged vendor integration code: it has no "
+        "contract and no validation -- it just parses whatever comes back "
+        "and hopes the shape matches what it expected. That's part of why "
+        "it broke as often as it did.\n"
+        "- If asked whether you'd support a real contract: yes, as long as "
+        "it doesn't block your release calendar -- you want versioning "
+        "and validation, not a change-approval bottleneck.\n\n"
+        "If asked generally what's needed, point them at your release "
+        "process and the salvaged code rather than describing the full "
+        "problem yourself."
+    ),
+    "agenda": (
+        "Get the FDE to design a data contract with explicit schema "
+        "versioning and validation that survives your independent release "
+        "calendar, instead of just re-parsing responses hopefully like the "
+        "salvaged code did."
+    ),
+}
+
+_STAGE_8_COMPLIANCE_CHECKLIST = [
+    {
+        "id": "schema-versioning",
+        "description": "Data contract includes explicit schema versioning",
+        "check": "must_include",
+        "value": "schema version",
+    },
+    {
+        "id": "validation",
+        "description": "Data contract includes validation, not just parsing",
+        "check": "must_include",
+        "value": "validation",
+    },
+    {
+        "id": "independent-release-calendar",
+        "description": "Acknowledges the warehouse team's independent release calendar",
+        "check": "must_include",
+        "value": "release calendar",
+    },
+    {
+        "id": "min-length",
+        "description": "Data contract writeup is substantive, not a one-liner",
+        "check": "min_length",
+        "value": 300,
+    },
+]
+
+_STAGE_8 = {
+    "persona": _STAGE_8_PERSONA,
+    "compliance_checklist": _STAGE_8_COMPLIANCE_CHECKLIST,
+}
+
 GLOBAL_RETAIL_STAGES: list[dict] = [
     _STAGE_0,
     _STAGE_1,
@@ -644,4 +713,5 @@ GLOBAL_RETAIL_STAGES: list[dict] = [
     _STAGE_5,
     _STAGE_6,
     _STAGE_7,
+    _STAGE_8,
 ]

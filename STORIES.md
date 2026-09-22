@@ -34,6 +34,7 @@ file's own `Status` field; keep this table in sync when a story moves.
 | FDE-024 | GlobalRetail engagement — Stage 5 (Solution Framing) | P1 | FDE-004, FDE-017, FDE-022, FDE-023 | Done |
 | FDE-025 | GlobalRetail engagement — Stage 6 (Semantic & Context Layer) | P1 | FDE-004, FDE-017, FDE-021, FDE-024 | Done |
 | FDE-026 | GlobalRetail engagement — Stage 7 (Enterprise Architecture) | P1 | FDE-004, FDE-017, FDE-025 | Done |
+| FDE-027 | GlobalRetail engagement — Stage 8 (Data Contracts & Integration) | P1 | FDE-004, FDE-017, FDE-026 | Done |
 
 ## Pick-up order
 
