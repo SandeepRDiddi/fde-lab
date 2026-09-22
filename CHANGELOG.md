@@ -229,3 +229,7 @@ One line per merged story (see `AGENT-WORKFLOW.md`).
 - FDE-037: GlobalRetail engagement, Stage 18 (Incident Simulation) — RCA
   for a 2s-to-18s latency spike with no matching deploy, communicated
   while still unfolding.
+- FDE-038: GlobalRetail engagement, Stage 19 (Change Request) — closes out
+  Mission 5 (Operate Under Pressure, Stages 17-19); Stage 8's data contract
+  survives a live schema break, competing capability ask triaged
+  separately.

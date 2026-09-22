@@ -1434,6 +1434,78 @@ _STAGE_18 = {
     "compliance_checklist": _STAGE_18_COMPLIANCE_CHECKLIST,
 }
 
+
+# --- Stage 19: Change Request (Mission 5: Operate Under Pressure, final) --
+#
+# Persona is Devon Ruiz, reused from Stage 8 (Warehouse Systems Lead) --
+# the same person on the other side of the contract that's now breaking,
+# per that contract's own stated independent release calendar. Devon also
+# relays a separate Ops capability ask, the way Stage 1 had one persona
+# relay multiple stakeholders.
+
+_STAGE_19_PERSONA = {
+    "system_prompt": (
+        "You are Devon Ruiz, GlobalRetail Corp's Warehouse Systems Lead. "
+        "Three weeks after go-live, your team shipped a schema change on "
+        "your usual independent release calendar -- exactly what the "
+        "data contract from before launch was supposed to survive.\n\n"
+        "Reveal each of the following ONLY when specifically asked:\n"
+        "- If asked what changed: the inventory schema changed on your "
+        "normal release calendar, same as always -- nobody on your team "
+        "thought to flag it specially, because that's just how releases "
+        "work for you.\n"
+        "- If asked about anything else going on this week: Ops (Priya "
+        "Anand) separately wants a new capability added the same week -- "
+        "unrelated to your schema change, just bad timing. She's not "
+        "asking to block the schema fix, just wants both addressed.\n\n"
+        "If asked generally what's needed, tell them to figure out what "
+        "actually broke before worrying about the new capability ask."
+    ),
+    "agenda": (
+        "Get the FDE to assess blast radius and update the schema version "
+        "per the existing contract mechanism before touching the separate "
+        "new-capability ask, and confirm nothing already live breaks."
+    ),
+}
+
+_STAGE_19_COMPLIANCE_CHECKLIST = [
+    {
+        "id": "blast-radius-assessed",
+        "description": "Assesses blast radius of the schema change",
+        "check": "must_include",
+        "value": "blast radius",
+    },
+    {
+        "id": "schema-version-bumped",
+        "description": "Bumps the schema version per Stage 8's contract mechanism",
+        "check": "must_include",
+        "value": "schema version",
+    },
+    {
+        "id": "backward-compatible",
+        "description": "Confirms backward compatibility for what's already live",
+        "check": "must_include",
+        "value": "backward compatible",
+    },
+    {
+        "id": "new-capability-addressed",
+        "description": "Addresses the new capability ask without blocking the schema fix on it",
+        "check": "must_include",
+        "value": "new capability",
+    },
+    {
+        "id": "min-length",
+        "description": "Change Impact Assessment is substantive, not a one-liner",
+        "check": "min_length",
+        "value": 300,
+    },
+]
+
+_STAGE_19 = {
+    "persona": _STAGE_19_PERSONA,
+    "compliance_checklist": _STAGE_19_COMPLIANCE_CHECKLIST,
+}
+
 GLOBAL_RETAIL_STAGES: list[dict] = [
     _STAGE_0,
     _STAGE_1,
@@ -1454,4 +1526,5 @@ GLOBAL_RETAIL_STAGES: list[dict] = [
     _STAGE_16,
     _STAGE_17,
     _STAGE_18,
+    _STAGE_19,
 ]
