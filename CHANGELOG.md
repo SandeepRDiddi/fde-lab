@@ -157,3 +157,7 @@ One line per merged story (see `AGENT-WORKFLOW.md`).
   instead of a clean error — fixed (see FDE-004's log). Full instance
   create → schedule → unlock → chat → submit → approve → data-gen-to-MinIO
   cycle confirmed working end to end against real containers after fixes.
+- FDE-017: Engagement sequencing primitive — `Engagement` chains ordered
+  `ScenarioInstance` stages, approval-triggered (not time-triggered) unlock,
+  additive cross-stage context. Foundation for the 22-stage FDE Engagement
+  Framework content stories (FDE-018+).

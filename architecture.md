@@ -54,6 +54,29 @@ time-based:
 
 This mirrors the FastAPI + Celery + Redis stack already proven on `genai-pulse-bot`.
 
+#### Engagement sequencing (FDE-017)
+A `ScenarioInstance` is still a standalone 1:1 unit by default (one config,
+one dataset, one task, one time-box). For a continuous multi-stage
+engagement — e.g. "The FDE Engagement Framework" (22 stages / 6 missions,
+`stories/FDE-018` onward) where a later stage consumes an earlier stage's
+output — an `Engagement` row chains an ordered sequence of
+`ScenarioInstance`s via `engagement_id`/`stage_order`. Advancing stages is
+triggered by submission **approval** (FDE-007's `apply_submission_decision`),
+not by a clock: approving stage *N*'s submission records that stage's
+`submission_content`/`grading_result` into `Engagement.context` (keyed by
+stage order, accumulating additively — never overwritten) and unlocks stage
+*N+1* by merging the updated `context` into its `config["engagement_context"]`
+and setting it `active`. Approving the last stage marks the `Engagement`
+`completed`. Rejecting a stage leaves it open for resubmission and unlocks
+nothing, mirroring FDE-007's existing single-instance behavior. A stage can
+still carry its own `start_at`/`end_at`/`pivot_at` via the existing
+`POST /scenario-instances/{id}/schedule` for in-stage timing (e.g. a
+timed incident window) — that time-triggered path is unchanged and
+independent of the event-triggered stage-to-stage advance. A standalone
+instance (`engagement_id` is null) is completely unaffected. New endpoints:
+`POST /engagements` (create the chain, only stage 0 unlocked), `GET
+/engagements/{id}` (chain + accumulated context).
+
 ### AI persona service — open-weight model via PromptOps Gateway
 Each scenario defines a persona: a system prompt encoding personality, agenda, and
 what the persona does/doesn't know, plus per-student conversation state. Persona
@@ -345,7 +368,7 @@ after Kubernetes is the production target — nothing above changes
 | AI-driven persona (stakeholder + demo audience) | Persona service on Claude, via PromptOps Gateway |
 | Enterprise constraints (legacy systems, compliance, approvals) | Mocks service (three sub-components) |
 | Scheduled, time-boxed cohort pacing | Celery + Redis scheduling in the backend |
-| Solo scenarios, team capstone | Data model supports both individual and team-scoped submissions |
+| Solo scenarios, multi-stage capstone | `Engagement` chains ordered `ScenarioInstance`s per student (FDE-017) — no team/multi-student submission concept exists |
 | End-to-end, client-ready v1 (no smaller slice) | Docker Compose deployment of the full stack above, not a partial slice |
 | LMS-integrated delivery for cohorts | LTI 1.3 launch service (Phase 3) + Kubernetes per-cohort namespaces (Phase 4) |
 

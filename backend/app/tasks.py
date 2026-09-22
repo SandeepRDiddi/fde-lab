@@ -7,7 +7,14 @@ from sqlalchemy import update
 
 from app.celery_app import celery_app
 from app.database import SessionLocal
-from app.models import ApprovalStatus, ScenarioInstance, ScenarioStatus, Submission
+from app.models import (
+    ApprovalStatus,
+    Engagement,
+    EngagementStatus,
+    ScenarioInstance,
+    ScenarioStatus,
+    Submission,
+)
 
 
 def revoke_task_if_pending(task_id: str | None) -> None:
@@ -83,6 +90,50 @@ def apply_scenario_pivot(instance_id: str) -> None:
         db.close()
 
 
+def _advance_engagement(db, instance: ScenarioInstance) -> None:
+    """FDE-017 AC2/AC4: called after an engagement-stage instance's
+    submission is approved. Records this stage's output into the
+    engagement's accumulated context, then either unlocks the next stage
+    (merging the updated context into its config) or, if this was the last
+    stage, marks the engagement complete. No-op for a standalone instance
+    (engagement_id is None) -- AC5."""
+    if instance.engagement_id is None:
+        return
+    engagement = db.get(Engagement, instance.engagement_id)
+    if engagement is None:
+        return
+
+    latest_submission = (
+        db.query(Submission)
+        .filter(Submission.scenario_instance_id == instance.id, Submission.status == ApprovalStatus.approved)
+        .order_by(Submission.decided_at.desc())
+        .first()
+    )
+    stage_output = {
+        "submission_content": latest_submission.content if latest_submission else None,
+        "grading_result": latest_submission.grading_result if latest_submission else None,
+    }
+    engagement.context = {**engagement.context, str(instance.stage_order): stage_output}
+
+    next_instance = (
+        db.query(ScenarioInstance)
+        .filter(
+            ScenarioInstance.engagement_id == engagement.id,
+            ScenarioInstance.stage_order == instance.stage_order + 1,
+        )
+        .one_or_none()
+    )
+    if next_instance is None:
+        engagement.status = EngagementStatus.completed
+        engagement.completed_at = datetime.now(timezone.utc)
+    else:
+        next_instance.config = {**next_instance.config, "engagement_context": engagement.context}
+        next_instance.status = ScenarioStatus.active
+        next_instance.notified_at = datetime.now(timezone.utc)
+
+    db.commit()
+
+
 def apply_submission_decision(db, submission: Submission, decision: ApprovalStatus) -> bool:
     """AC3: record the outcome and notify the student. Shared by the manual
     decision route and the auto-decide task below so both paths land in the
@@ -111,6 +162,11 @@ def apply_submission_decision(db, submission: Submission, decision: ApprovalStat
 
     db.commit()
     db.refresh(submission)
+
+    if instance is not None and decision == ApprovalStatus.approved:
+        db.refresh(instance)
+        _advance_engagement(db, instance)
+
     return True
 
 
